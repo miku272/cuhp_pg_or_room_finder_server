@@ -1,0 +1,15 @@
+services:
+  backend:
+    build:
+      context: ./
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - PORT=${PORT}
+      - DATABASE_URL=${DATABASE_URL}
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./:/app:delegated
+      - /app/node_modules

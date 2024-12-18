@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
+import { ValidationError } from 'express-validator';
+
 import { AppError } from '../utils/error';
 
 export const errorHandler: ErrorRequestHandler = (
@@ -9,10 +11,20 @@ export const errorHandler: ErrorRequestHandler = (
   next: NextFunction
 ): void => {
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
+    const response: {
+      status: string;
+      message: string;
+      errors?: ValidationError[];
+    } = {
       status: err.status,
       message: err.message,
-    });
+    };
+
+    if (err.errors) {
+      response.errors = err.errors;
+    }
+
+    res.status(err.statusCode).json(response);
 
     return;
   }

@@ -1,6 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { AppError } from '../utils/error';
+import { generateJWT } from '../utils/jwtHandler';
+import { User } from '../models';
+import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 
 export const signup = async (
   req: Request,
@@ -8,15 +11,73 @@ export const signup = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    if (
-      req.body.email === undefined ||
-      req.body.email === null ||
-      req.body.email === ''
-    ) {
-      throw new AppError('Email is required', 400);
+    const { name, email, password } = req.body;
+
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      throw new AppError('User already exists', 400);
     }
+
+    const user = await User.create({ name, email, password });
+
+    res.status(201).json({
+      status: 'success',
+      data: { user },
+    });
   } catch (error) {
-    console.log('Error in signup: ', error);
+    next(error);
+  }
+};
+
+export const login = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email }).select('+password');
+
+    if (!user) {
+      throw new AppError('User with this email does not exist', 404);
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+
+    if (!isPasswordValid) {
+      throw new AppError('Invalid password', 401);
+    }
+
+    const token = generateJWT(user._id, user.name, user.email);
+
+    res.status(200).json({
+      status: 'success',
+      data: { user, tokenData: token },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUserData = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const user = await User.findById(req._id);
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: { user },
+    });
+  } catch (error) {
     next(error);
   }
 };

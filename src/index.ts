@@ -3,9 +3,13 @@ import express from 'express';
 import authRouter from './routes/auth';
 
 import { connectDB } from './db';
+
+import { CORS } from './middlewares/CORS';
 import { errorHandler } from './middlewares/error';
 
 const app = express();
+
+app.use(CORS);
 
 app.use(express.json());
 app.use('/auth', authRouter);

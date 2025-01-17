@@ -8,6 +8,8 @@ import {
   validateLoginRequest,
   tokenAuth,
 } from '../middlewares/auth';
+import { otpValidation, validateOtp } from '../middlewares/otp';
+import { generateEmailOtp, verifyEmailOtp } from '../controllers/otp';
 
 const authRouter = Router();
 
@@ -18,5 +20,13 @@ authRouter.get('/', (req, res) => {
 authRouter.post('/signup', signupValidation, validateSignupRequest, signup);
 authRouter.post('/login', loginValidation, validateLoginRequest, login);
 authRouter.post('/token-auth', tokenAuth, getUserData);
+authRouter.post('/send-email-otp', tokenAuth, generateEmailOtp);
+authRouter.post(
+  '/verify-email-otp',
+  tokenAuth,
+  otpValidation,
+  validateOtp,
+  verifyEmailOtp
+);
 
 export default authRouter;

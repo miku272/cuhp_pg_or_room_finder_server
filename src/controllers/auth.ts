@@ -20,7 +20,7 @@ export const signup = async (
     }
 
     const user = await User.create({ name, email, password });
-    const token = generateJWT(user._id, user.name, user.email);
+    const token = generateJWT(user._id, user.name, user.email as string);
 
     res.status(201).json({
       status: 'success',
@@ -51,7 +51,7 @@ export const login = async (
       throw new AppError('Invalid password', 401);
     }
 
-    const token = generateJWT(user._id, user.name, user.email);
+    const token = generateJWT(user._id, user.name, user.email as string);
 
     res.status(200).json({
       status: 'success',

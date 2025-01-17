@@ -20,6 +20,10 @@ export const connectDB = async (): Promise<void> => {
     process.exit(1);
   }
 
+  mongoose.connection.on('connected', () => {
+    console.log('Database connected');
+  });
+
   mongoose.connection.on('error', (error) => {
     console.error(error);
   });

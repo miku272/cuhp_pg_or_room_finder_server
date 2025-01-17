@@ -83,7 +83,7 @@ export const validateLoginRequest = (
 };
 
 export const tokenAuth = async (
-  req: AuthenticatedRequest,
+  req: Request | AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {

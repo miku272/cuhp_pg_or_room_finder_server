@@ -1,6 +1,8 @@
 import mongoose, { CallbackError, Document, Schema } from 'mongoose';
 import bcrypt from 'bcrypt';
 
+import { AppError } from '../utils/error';
+
 interface User extends Document {
   _id: mongoose.Types.ObjectId;
   email: string | null;
@@ -16,7 +18,8 @@ interface User extends Document {
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
-  isEmailOtpValid(candidateEmailOtp: number): Promise<boolean>;
+  isEmailOtpValid(candidateEmailOtp: string): Promise<boolean>;
+  isPhoneOtpValid(candidatePhoneOtp: string): Promise<boolean>;
 }
 
 const userSchema = new Schema<User>(
@@ -71,17 +74,21 @@ const userSchema = new Schema<User>(
       select: false,
       default: null,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    },
   },
   {
+    timestamps: true,
     toJSON: {
+      transform: (doc, ret): Record<string, unknown> => {
+        delete ret.password;
+        delete ret.emailOtp;
+        delete ret.emailOtpExpires;
+        delete ret.phoneOtp;
+        delete ret.phoneOtpExpires;
+
+        return ret;
+      },
+    },
+    toObject: {
       transform: (doc, ret): Record<string, unknown> => {
         delete ret.password;
         delete ret.emailOtp;
@@ -125,7 +132,37 @@ userSchema.methods.isEmailOtpValid = async function (
 
   const hasEmailOtpExpired = this.emailOtpExpires.getTime() < Date.now();
 
+  if (hasEmailOtpExpired) {
+    throw new AppError('Email OTP has expired. Please request a new one.', 400);
+  }
+
   return isEmailOtpMatching && !hasEmailOtpExpired;
+};
+
+userSchema.methods.isPhoneOtpValid = async function (
+  candidatePhoneOtp: string
+): Promise<boolean> {
+  if (
+    this.phoneOtp === undefined ||
+    this.phoneOtp === null ||
+    this.phoneOtpExpires === undefined ||
+    this.phoneOtpExpires === null
+  ) {
+    return false;
+  }
+
+  const isPhoneOtpMatching = await bcrypt.compare(
+    candidatePhoneOtp,
+    this.phoneOtp
+  );
+
+  const hasPhoneOtpExpired = this.phoneOtpExpires.getTime() < Date.now();
+
+  if (hasPhoneOtpExpired) {
+    throw new AppError('Phone OTP has expired. Please request a new one.', 400);
+  }
+
+  return isPhoneOtpMatching && !hasPhoneOtpExpired;
 };
 
 userSchema.pre('save', async function (next) {
@@ -157,6 +194,26 @@ userSchema.pre('save', async function (next) {
     const salt = await bcrypt.genSalt(10);
 
     this.emailOtp = await bcrypt.hash(this.emailOtp, salt);
+
+    next();
+  } catch (error) {
+    next(error as CallbackError);
+  }
+});
+
+userSchema.pre('save', async function (next) {
+  if (
+    this.phoneOtp === undefined ||
+    this.phoneOtp === null ||
+    !this.isModified('phoneOtp')
+  ) {
+    return next();
+  }
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+
+    this.phoneOtp = await bcrypt.hash(this.phoneOtp, salt);
 
     next();
   } catch (error) {

@@ -6,7 +6,7 @@ import { verifyJWT } from '../utils/jwtHandler';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 import { User } from '../models';
 
-export const signupValidation: ValidationChain[] = [
+export const signupUsingEmailAndPasswordValidation: ValidationChain[] = [
   body('name')
     .trim()
     .notEmpty()
@@ -30,7 +30,7 @@ export const signupValidation: ValidationChain[] = [
     ),
 ];
 
-export const validateSignupRequest = (
+export const validateSignupUsingEmailAndPasswordRequest = (
   req: Request,
   res: Response,
   next: NextFunction
@@ -47,7 +47,7 @@ export const validateSignupRequest = (
   next();
 };
 
-export const loginValidation: ValidationChain[] = [
+export const loginUsingEmailAndPasswordValidation: ValidationChain[] = [
   body('email')
     .trim()
     .notEmpty()
@@ -65,7 +65,83 @@ export const loginValidation: ValidationChain[] = [
     ),
 ];
 
-export const validateLoginRequest = (
+export const validateLoginUsingEmailAndPasswordRequest = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    const validationErrors = errors.array();
+    const error = new AppError('Validation failed', 422, validationErrors);
+    next(error);
+    return;
+  }
+
+  next();
+};
+
+export const signupUsingPhoneAndPasswordValidation: ValidationChain[] = [
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Name is required')
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Name must be between 2 and 100 characters'),
+  body('phone')
+    .trim()
+    .notEmpty()
+    .withMessage('Phone is required')
+    .isMobilePhone('en-IN')
+    .withMessage('Phone is invalid'),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters')
+    .matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{6,}$/)
+    .withMessage(
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    ),
+];
+
+export const validateSignupUsingPhoneAndPasswordRequest = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    const validationErrors = errors.array();
+    const error = new AppError('Validation failed', 422, validationErrors);
+    next(error);
+    return;
+  }
+
+  next();
+};
+
+export const loginUsingPhoneAndPasswordValidation: ValidationChain[] = [
+  body('phone')
+    .trim()
+    .notEmpty()
+    .withMessage('Phone is required')
+    .isMobilePhone('en-IN')
+    .withMessage('Phone is invalid'),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters')
+    .matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{6,}$/)
+    .withMessage(
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    ),
+];
+
+export const validateLoginUsingPhoneAndPasswordRequest = (
   req: Request,
   res: Response,
   next: NextFunction

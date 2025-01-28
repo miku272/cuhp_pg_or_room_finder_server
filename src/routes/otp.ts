@@ -5,13 +5,13 @@ import { otpValidation, validateOtp } from '../middlewares/otp';
 
 import {
   generateEmailOtp,
-  getUserData,
   verifyEmailOtp,
-} from '../controllers/auth';
+  generatePhoneOtp,
+  verifyPhoneOtp,
+} from '../controllers/otp';
 
 const otpRouter = Router();
 
-otpRouter.post('/token-auth', tokenAuth, getUserData);
 otpRouter.post('/send-email-otp', tokenAuth, generateEmailOtp);
 otpRouter.post(
   '/verify-email-otp',
@@ -19,6 +19,15 @@ otpRouter.post(
   otpValidation,
   validateOtp,
   verifyEmailOtp
+);
+
+otpRouter.post('/send-phone-otp', tokenAuth, generatePhoneOtp);
+otpRouter.post(
+  '/verify-phone-otp',
+  tokenAuth,
+  otpValidation,
+  validateOtp,
+  verifyPhoneOtp
 );
 
 export default otpRouter;

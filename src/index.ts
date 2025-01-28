@@ -1,4 +1,5 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 
 import authRouter from './routes/auth';
 import otpRouter from './routes/otp';
@@ -10,10 +11,26 @@ import { errorHandler } from './middlewares/error';
 
 const app = express();
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests, please try again later',
+});
+app.use(limiter);
+
 app.use(CORS);
 
 app.use(express.json());
-app.use('/auth', authRouter);
+
+const authLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  message: 'Too many authentication requests, please try again in an hour',
+});
+app.use('/auth', authLimiter, authRouter);
+
 app.use(otpRouter);
 
 app.get('/', (req, res) => {

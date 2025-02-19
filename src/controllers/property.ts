@@ -22,7 +22,10 @@ export const addProperty = async (
 
     const {
       propertyName,
-      propertyAddress,
+      propertyAddressLine1,
+      propertyAddressLine2 = null,
+      propertyVillageOrCity,
+      propertyPincode,
       ownerName,
       ownerPhone,
       ownerEmail,
@@ -37,7 +40,10 @@ export const addProperty = async (
     const property = await Property.create({
       owner: _id,
       propertyName,
-      propertyAddress,
+      propertyAddressLine1,
+      propertyAddressLine2,
+      propertyVillageOrCity,
+      propertyPincode,
       ownerName,
       ownerPhone,
       ownerEmail,

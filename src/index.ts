@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 
 import authRouter from './routes/auth';
 import otpRouter from './routes/otp';
+import propertyRouter from './routes/property';
 
 import { connectDB } from './db';
 
@@ -32,6 +33,8 @@ const authLimiter = rateLimit({
 app.use('/auth', authLimiter, authRouter);
 
 app.use(otpRouter);
+
+app.use(propertyRouter);
 
 app.get('/', (req, res) => {
   res.send('Hello World!!!');

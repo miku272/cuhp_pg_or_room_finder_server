@@ -12,12 +12,34 @@ export const addPropertyValidation: ValidationChain[] = [
     .isLength({ min: 3, max: 200 })
     .withMessage('Property name must be between 3 and 200 characters'),
 
-  body('propertyAddress')
+  body('propertyAddressLine1')
     .trim()
     .notEmpty()
     .withMessage('Property address is required')
     .isLength({ min: 3, max: 200 })
     .withMessage('Property address must be between 3 and 200 characters'),
+
+  body('propertyAddressLine2')
+    .trim()
+    .isLength({ min: 3, max: 200 })
+    .withMessage('Property address line 2 must be between 3 and 200 characters')
+    .optional(),
+
+  body('propertyVillageOrCity')
+    .trim()
+    .notEmpty()
+    .withMessage('Property village or city is required')
+    .isLength({ min: 3, max: 200 })
+    .withMessage(
+      'Property village or city must be between 3 and 200 characters'
+    ),
+
+  body('propertyPincode')
+    .trim()
+    .notEmpty()
+    .withMessage('Property pincode is required')
+    .isLength({ min: 6, max: 6 })
+    .withMessage('Property pincode must be 6 characters'),
 
   body('ownerName')
     .trim()
@@ -46,8 +68,8 @@ export const addPropertyValidation: ValidationChain[] = [
     .trim()
     .notEmpty()
     .withMessage('Property type is required')
-    .isIn(['building', 'flat'])
-    .withMessage('Property type must be either building or flat'),
+    .isIn(['pg', 'room'])
+    .withMessage('Property type must be either pg or room'),
 
   body('propertyGenderAllowance')
     .trim()

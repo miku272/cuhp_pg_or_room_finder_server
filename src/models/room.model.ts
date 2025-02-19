@@ -11,13 +11,6 @@ interface Room extends Document {
     security?: undefined | null | number;
   };
   aminities: string[];
-  services: {
-    food: boolean;
-    electricity: boolean;
-    water: boolean;
-    internet: boolean;
-    laundry: boolean;
-  };
   images: string[];
   status: 'vacant' | 'occupied' | 'maintenance';
 }
@@ -36,13 +29,6 @@ const roomSchema = new Schema<Room>({
     security: { type: Number },
   },
   aminities: [{ type: String }],
-  services: {
-    food: { type: Boolean, default: false },
-    electricity: { type: Boolean, default: false },
-    water: { type: Boolean, default: false },
-    internet: { type: Boolean, default: false },
-    laundry: { type: Boolean, default: false },
-  },
   images: [{ type: String }],
   status: {
     type: String,

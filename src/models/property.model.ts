@@ -1,29 +1,39 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 const UNIVERSITY_COORDINATES = {
-  lat: 32.1726,
-  lng: 76.3617,
+  lat: 32.22449,
+  lng: 76.156601,
 };
 
 interface Property extends Document {
   _id: mongoose.Types.ObjectId;
   owner: mongoose.Types.ObjectId;
   propertyName: string;
-  propertyAddress: string;
+  propertyAddressLine1: string;
+  propertyAddressLine2: undefined | null | string;
+  propertyVillageOrCity: string;
+  propertyPincode: string;
   ownerName: string;
   ownerPhone: string;
   ownerEmail: string;
-  propertyType: 'building' | 'flat';
+  propertyType: 'pg' | 'room';
   propertyGenderAllowance: 'boys' | 'girls' | 'co-ed';
   rentAgreementAvailable: boolean;
   coordinates: {
     lat: number;
     lng: number;
   };
-  distanceFromUniversity: number;
-  commonAminities: string[];
+  // distanceFromUniversity: number;
+  services: {
+    food: boolean;
+    electricity: boolean;
+    water: boolean;
+    internet: boolean;
+    laundry: boolean;
+    parking: boolean;
+  };
   images: string[];
-  units: undefined | null | mongoose.Types.ObjectId[];
+  rooms: undefined | null | mongoose.Types.ObjectId[];
   isVerified: boolean;
   isActive: boolean;
   createdAt: Date;
@@ -34,13 +44,16 @@ const propertySchema = new Schema<Property>(
   {
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     propertyName: { type: String, required: true },
-    propertyAddress: { type: String, required: true },
+    propertyAddressLine1: { type: String, required: true },
+    propertyAddressLine2: { type: String },
+    propertyVillageOrCity: { type: String, required: true },
+    propertyPincode: { type: String, required: true },
     ownerName: { type: String, required: true },
     ownerPhone: { type: String, required: true },
     ownerEmail: { type: String, required: true },
     propertyType: {
       type: String,
-      enum: ['building', 'flat'],
+      enum: ['pg', 'room'],
       required: true,
     },
     propertyGenderAllowance: {
@@ -52,10 +65,17 @@ const propertySchema = new Schema<Property>(
       lat: { type: Number, required: true },
       lng: { type: Number, required: true },
     },
-    distanceFromUniversity: { type: Number },
-    commonAminities: [{ type: String }],
+    // distanceFromUniversity: { type: Number },
+    services: {
+      food: { type: Boolean, default: false },
+      electricity: { type: Boolean, default: false },
+      water: { type: Boolean, default: false },
+      internet: { type: Boolean, default: false },
+      laundry: { type: Boolean, default: false },
+      parking: { type: Boolean, default: false },
+    },
     images: [{ type: String }],
-    units: [{ type: Schema.Types.ObjectId, ref: 'Room' }],
+    rooms: [{ type: Schema.Types.ObjectId, ref: 'Room' }],
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
   },

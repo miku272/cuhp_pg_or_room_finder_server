@@ -31,7 +31,7 @@ export const signupUsingEmailAndPassword = async (
   }
 };
 
-export const loginusingEmailAndPassword = async (
+export const loginUsingEmailAndPassword = async (
   req: Request,
   res: Response,
   next: NextFunction

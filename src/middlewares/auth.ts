@@ -165,17 +165,12 @@ export const tokenAuth = async (
 ): Promise<void> => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    const _id = req.body._id;
 
     if (token === undefined || token === null || token === '') {
       throw new AppError('No authorization token. Access denied!', 401);
     }
 
     const decoded = verifyJWT(token);
-
-    if (decoded._id !== _id) {
-      throw new AppError('Invalid authorization token. Access denied!', 401);
-    }
 
     const user = await User.findById(decoded._id);
 

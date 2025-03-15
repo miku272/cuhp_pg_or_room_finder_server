@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import {
   signupUsingEmailAndPassword,
-  loginusingEmailAndPassword,
+  loginUsingEmailAndPassword,
   signupUsingPhoneAndPassword,
   loginUsingPhoneAndPassword,
   getUserData,
@@ -36,7 +36,7 @@ authRouter.post(
   '/login-using-email-and-password',
   loginUsingEmailAndPasswordValidation,
   validateLoginUsingEmailAndPasswordRequest,
-  loginusingEmailAndPassword
+  loginUsingEmailAndPassword
 );
 
 authRouter.post(

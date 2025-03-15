@@ -13,7 +13,7 @@ interface TokenResponse {
 export const generateJWT = (
   _id: Types.ObjectId | string,
   name: string,
-  email: string
+  emailOrPhone: string
 ): TokenResponse => {
   try {
     if (
@@ -31,9 +31,13 @@ export const generateJWT = (
       Date.now() + days * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    const token = jwt.sign({ _id, name, email }, process.env.JWT_SECRET, {
-      expiresIn,
-    });
+    const token = jwt.sign(
+      { _id, name, emailOrPhone },
+      process.env.JWT_SECRET,
+      {
+        expiresIn,
+      }
+    );
 
     return { token, expiresIn: expirationDate };
   } catch (error) {

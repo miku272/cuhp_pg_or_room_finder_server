@@ -18,21 +18,24 @@ interface Property extends Document {
   ownerEmail: string;
   propertyType: 'pg' | 'room';
   propertyGenderAllowance: 'boys' | 'girls' | 'co-ed';
-  rentAgreementAvailable: boolean;
+  rentAgreementAvailable: undefined | null | boolean;
   coordinates: {
     lat: number;
     lng: number;
   };
   // distanceFromUniversity: number;
-  services: {
-    food: boolean;
-    electricity: boolean;
-    water: boolean;
-    internet: boolean;
-    laundry: boolean;
-    parking: boolean;
-  };
-  images: string[];
+  services:
+    | undefined
+    | null
+    | {
+        food: boolean;
+        electricity: boolean;
+        water: boolean;
+        internet: boolean;
+        laundry: boolean;
+        parking: boolean;
+      };
+  images: undefined | null | string[];
   rooms: undefined | null | mongoose.Types.ObjectId[];
   isVerified: boolean;
   isActive: boolean;

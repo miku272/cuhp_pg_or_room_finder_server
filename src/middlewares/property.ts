@@ -1,5 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import { body, validationResult, ValidationChain } from 'express-validator';
+import {
+  body,
+  query,
+  validationResult,
+  ValidationChain,
+} from 'express-validator';
 
 import { AppError } from '../utils/error';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
@@ -21,9 +26,17 @@ export const addPropertyValidation: ValidationChain[] = [
 
   body('propertyAddressLine2')
     .trim()
-    .isLength({ min: 3, max: 200 })
-    .withMessage('Property address line 2 must be between 3 and 200 characters')
-    .optional(),
+    .optional()
+    .custom((value: string) => {
+      if (value) {
+        if (value.trim().length < 3 || value.trim().length > 200) {
+          throw new Error(
+            'Property address line 2 must be between 3 and 200 characters'
+          );
+        }
+      }
+      return true;
+    }),
 
   body('propertyVillageOrCity')
     .trim()
@@ -50,12 +63,8 @@ export const addPropertyValidation: ValidationChain[] = [
 
   body('ownerPhone')
     .trim()
-    .notEmpty()
-    .withMessage('Owner phone is required')
     .isLength({ min: 10, max: 10 })
-    .withMessage('Owner phone must be 10 characters')
-    .isMobilePhone('en-IN')
-    .withMessage('Owner phone must be a valid Indian phone number'),
+    .withMessage('Owner phone must be 10 characters'),
 
   body('ownerEmail')
     .trim()
@@ -90,17 +99,38 @@ export const addPropertyValidation: ValidationChain[] = [
     .isFloat({ min: -180, max: 180 })
     .withMessage('Longitude must be between -180 and 180'),
 
-  body('commonAminities')
-    .isArray()
-    .withMessage('Common aminities must be an array')
-    .optional(),
+  body('services')
+    .optional()
+    .custom((value: unknown) => {
+      if (value !== undefined && value !== null) {
+        if (typeof value !== 'object' || Array.isArray(value)) {
+          throw new Error('Services must be an object');
+        }
+      }
+      return true;
+    }),
 
-  body('images').isArray().withMessage('Images must be an array').optional(),
+  body('images')
+    .optional()
+    .custom((value: unknown) => {
+      if (value !== undefined && value !== null) {
+        if (!Array.isArray(value)) {
+          throw new Error('Images must be an array');
+        }
+      }
+      return true;
+    }),
 
   body('rentAgreementAvailable')
-    .isBoolean()
-    .withMessage('Rent agreement available must be a boolean')
-    .optional(),
+    .optional()
+    .custom((value: unknown) => {
+      if (value !== undefined && value !== null) {
+        if (typeof value !== 'boolean') {
+          throw new Error('Rent agreement available must be a boolean');
+        }
+      }
+      return true;
+    }),
 ];
 
 export const validateAddPropertyRequest = (
@@ -112,6 +142,45 @@ export const validateAddPropertyRequest = (
 
   if (!errors.isEmpty()) {
     const validationErrors = errors.array();
+
+    console.log(validationErrors);
+
+    const error = new AppError('Validation failed', 422, validationErrors);
+    next(error);
+    return;
+  }
+
+  next();
+};
+
+export const paginationValidation: ValidationChain[] = [
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer')
+    .toInt(),
+
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limit must be between 1 and 100')
+    .toInt(),
+
+  query('sort').optional().isString().withMessage('Sort must be a string'),
+];
+
+export const validatePaginationParams = (
+  req: Request | AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    const validationErrors = errors.array();
+
+    console.log(validationErrors);
+
     const error = new AppError('Validation failed', 422, validationErrors);
     next(error);
     return;

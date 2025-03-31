@@ -16,6 +16,7 @@ interface Property extends Document {
   ownerName: string;
   ownerPhone: string;
   ownerEmail: string;
+  pricePerMonth: number;
   propertyType: 'pg' | 'room';
   propertyGenderAllowance: 'boys' | 'girls' | 'co-ed';
   rentAgreementAvailable: undefined | null | boolean;
@@ -54,6 +55,7 @@ const propertySchema = new Schema<Property>(
     ownerName: { type: String, required: true },
     ownerPhone: { type: String, required: true },
     ownerEmail: { type: String, required: true },
+    pricePerMonth: { type: Number, required: true },
     propertyType: {
       type: String,
       enum: ['pg', 'room'],

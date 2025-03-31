@@ -29,6 +29,7 @@ export const addProperty = async (
       ownerName,
       ownerPhone,
       ownerEmail,
+      pricePerMonth,
       propertyType,
       propertyGenderAllowance,
       rentAgreementAvailable,
@@ -47,6 +48,7 @@ export const addProperty = async (
       ownerName,
       ownerPhone,
       ownerEmail,
+      pricePerMonth,
       propertyType,
       propertyGenderAllowance,
       rentAgreementAvailable,
@@ -58,6 +60,106 @@ export const addProperty = async (
     await User.findByIdAndUpdate(_id, { $push: { property: property._id } });
 
     res.status(201).json({
+      status: 'success',
+      data: { property },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProperty = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const _id = req._id;
+
+    const user = await User.exists({ _id });
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    const {
+      propertyId,
+      propertyName,
+      propertyAddressLine1,
+      propertyAddressLine2 = null,
+      propertyVillageOrCity,
+      propertyPincode,
+      ownerName,
+      ownerPhone,
+      ownerEmail,
+      pricePerMonth,
+      propertyType,
+      propertyGenderAllowance,
+      rentAgreementAvailable,
+      coordinates,
+      services,
+      images,
+    } = req.body;
+
+    const existingProperty = await Property.findById(propertyId);
+    if (!existingProperty) {
+      throw new AppError('Property not found', 404);
+    }
+
+    if (existingProperty.owner.toString() !== _id?.toString()) {
+      throw new AppError('You are not authorized to update this property', 403);
+    }
+
+    const property = await Property.findByIdAndUpdate(
+      propertyId,
+      {
+        propertyName,
+        propertyAddressLine1,
+        propertyAddressLine2,
+        propertyVillageOrCity,
+        propertyPincode,
+        ownerName,
+        ownerPhone,
+        ownerEmail,
+        pricePerMonth,
+        propertyType,
+        propertyGenderAllowance,
+        rentAgreementAvailable,
+        coordinates,
+        services,
+        images,
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: { property },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const togglePropertyActivation = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { propertyId } = req.params;
+
+    const property = await Property.findById(propertyId);
+
+    if (!property) {
+      throw new AppError('Property not found', 404);
+    }
+
+    property.isActive = !property.isActive;
+
+    await property.save();
+
+    res.status(200).json({
       status: 'success',
       data: { property },
     });

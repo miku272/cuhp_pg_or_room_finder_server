@@ -30,13 +30,23 @@ const userSchema = new Schema<User>(
       type: String,
       // required: true,
       unique: true,
+      sparse: true,
       trim: true,
+      index: {
+        unique: true,
+        sparse: true,
+      },
     },
     phone: {
       type: String,
       // required: true,
       unique: true,
+      sparse: true,
       trim: true,
+      index: {
+        unique: true,
+        sparse: true,
+      },
     },
     password: {
       type: String,

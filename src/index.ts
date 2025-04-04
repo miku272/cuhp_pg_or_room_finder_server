@@ -13,7 +13,10 @@ import { errorHandler } from './middlewares/error';
 const app = express();
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  keyGenerator: (req) => {
+    return req.ip + req.originalUrl;
+  },
+  windowMs: 15 * 60 * 1000, // 15 minutes
   limit: 100,
   standardHeaders: true,
   legacyHeaders: false,
@@ -25,12 +28,7 @@ app.use(CORS);
 
 app.use(express.json());
 
-const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  limit: 10,
-  message: 'Too many authentication requests, please try again in an hour',
-});
-app.use('/auth', authLimiter, authRouter);
+app.use('/auth', authRouter);
 
 app.use(otpRouter);
 

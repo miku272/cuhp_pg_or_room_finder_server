@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 
 import {
   signupUsingEmailAndPassword,
@@ -21,12 +22,34 @@ import {
 
 const authRouter = Router();
 
+const loginLimiter = rateLimit({
+  keyGenerator: (req) => {
+    return req.ip + req.originalUrl;
+  },
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many login requests, please try again later',
+});
+const signupLimiter = rateLimit({
+  keyGenerator: (req) => {
+    return req.ip + req.originalUrl;
+  },
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many signup requests, please try again later',
+});
+
 authRouter.get('/', (req, res) => {
   res.send('Auth route up and running');
 });
 
 authRouter.post(
   '/signup-using-email-and-password',
+  signupLimiter,
   signupUsingEmailAndPasswordValidation,
   validateSignupUsingEmailAndPasswordRequest,
   signupUsingEmailAndPassword
@@ -34,6 +57,7 @@ authRouter.post(
 
 authRouter.post(
   '/login-using-email-and-password',
+  loginLimiter,
   loginUsingEmailAndPasswordValidation,
   validateLoginUsingEmailAndPasswordRequest,
   loginUsingEmailAndPassword

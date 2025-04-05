@@ -27,7 +27,7 @@ const loginLimiter = rateLimit({
     return req.ip + req.originalUrl;
   },
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Too many login requests, please try again later',
@@ -37,7 +37,7 @@ const signupLimiter = rateLimit({
     return req.ip + req.originalUrl;
   },
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Too many signup requests, please try again later',

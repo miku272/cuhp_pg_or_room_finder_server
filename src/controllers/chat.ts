@@ -122,9 +122,6 @@ export const getChatById = async (
       chat.sender._id.toString() !== userId.toString() &&
       chat.receiver._id.toString() !== userId.toString()
     ) {
-      console.log(`${chat.sender.toString()}, ${userId.toString()}`);
-      console.log(`${chat.receiver.toString()}, ${userId.toString()}`);
-
       throw new AppError('You are not authorized to view this chat', 403);
     }
 

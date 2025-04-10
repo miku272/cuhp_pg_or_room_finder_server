@@ -33,4 +33,4 @@ export const messageSchema = new mongoose.Schema<Message>({
   },
 });
 
-export const MessageModel = mongoose.model<Message>('Message', messageSchema);
+// export const MessageModel = mongoose.model<Message>('Message', messageSchema);

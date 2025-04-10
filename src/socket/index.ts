@@ -53,12 +53,12 @@ export const setupSocketIO = (io: SocketIOServer): void => {
 
     socket.on(
       'send_message',
-      async (data: { chatId: string; content: string }) => {
+      async (data: { chatId: string; content: string; type: string }) => {
         try {
           if (!(socket._id as string)) {
             throw new AppError('Socket Authentication error: No user ID', 401);
           }
-          const { chatId, content } = data;
+          const { chatId, content, type } = data;
 
           const chat = await Chat.findById(chatId);
 
@@ -73,13 +73,32 @@ export const setupSocketIO = (io: SocketIOServer): void => {
             throw new AppError('You are not allowed to join this chat', 403);
           }
 
-          chat.messages.push({
+          console.log(type);
+          const validMessageTypes = ['text', 'image', 'video', 'audio', 'file'];
+          if (!validMessageTypes.includes(type)) {
+            throw new AppError('Invalid message type', 400);
+          }
+
+          // Now TypeScript knows this is a valid message type
+          const messageType = type as
+            | 'text'
+            | 'image'
+            | 'video'
+            | 'audio'
+            | 'file';
+
+          const newMessage = {
             sender: new mongoose.Types.ObjectId(socket._id),
-            content,
+            content: content,
             timestamp: new Date(),
-            type: 'text',
+            type: messageType,
             isRead: false,
-          });
+          };
+
+          chat.messages.push(newMessage);
+
+          chat.lastMessage = newMessage;
+          chat.lastMessageTimestamp = newMessage.timestamp;
 
           await chat.save();
 

@@ -119,9 +119,12 @@ export const getChatById = async (
     }
 
     if (
-      chat.sender.toString() !== userId &&
-      chat.receiver.toString() !== userId
+      chat.sender._id.toString() !== userId.toString() &&
+      chat.receiver._id.toString() !== userId.toString()
     ) {
+      console.log(`${chat.sender.toString()}, ${userId.toString()}`);
+      console.log(`${chat.receiver.toString()}, ${userId.toString()}`);
+
       throw new AppError('You are not authorized to view this chat', 403);
     }
 
@@ -153,8 +156,8 @@ export const sendMessage = async (
     }
 
     if (
-      chat.sender.toString() !== userId &&
-      chat.receiver.toString() !== userId
+      chat.sender.toString() !== userId.toString() &&
+      chat.receiver.toString() !== userId.toString()
     ) {
       throw new AppError(
         'You are not authorized to send a message in this chat',
@@ -162,13 +165,18 @@ export const sendMessage = async (
       );
     }
 
-    chat.messages.push({
+    const newMessage = {
       sender: new mongoose.Types.ObjectId(userId),
       content: content,
       timestamp: new Date(),
       type: type,
       isRead: false,
-    });
+    };
+
+    chat.messages.push(newMessage);
+
+    chat.lastMessage = newMessage;
+    chat.lastMessageTimestamp = newMessage.timestamp;
 
     await chat.save();
 

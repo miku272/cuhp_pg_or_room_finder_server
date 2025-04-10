@@ -8,8 +8,8 @@ interface Chat extends Document {
   receiver: mongoose.Types.ObjectId;
   propertyId?: mongoose.Types.ObjectId;
   messages: Message[];
-  lastMessage: Message;
-  lastMessageTimestamp: Date;
+  lastMessage?: undefined | null | Message;
+  lastMessageTimestamp?: undefined | null | Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,7 +33,8 @@ const chatSchema = new Schema<Chat>(
     messages: [messageSchema],
     lastMessage: {
       type: messageSchema,
-      required: true,
+      // required: true,
+      default: null,
     },
     lastMessageTimestamp: {
       type: Date,

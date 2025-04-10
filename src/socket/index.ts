@@ -73,13 +73,11 @@ export const setupSocketIO = (io: SocketIOServer): void => {
             throw new AppError('You are not allowed to join this chat', 403);
           }
 
-          console.log(type);
           const validMessageTypes = ['text', 'image', 'video', 'audio', 'file'];
           if (!validMessageTypes.includes(type)) {
             throw new AppError('Invalid message type', 400);
           }
 
-          // Now TypeScript knows this is a valid message type
           const messageType = type as
             | 'text'
             | 'image'

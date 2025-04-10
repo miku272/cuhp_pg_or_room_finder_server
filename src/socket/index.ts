@@ -1,0 +1,160 @@
+import { Server as SocketIOServer } from 'socket.io';
+
+import { type AuthenticatedSocket } from '../types/AuthenticatedSocket';
+
+import { AppError } from '../utils/error';
+import { verifyJWT } from '../utils/jwtHandler';
+import { Chat, User } from '../models';
+import mongoose from 'mongoose';
+
+interface UserToSocketMap {
+  [userId: string]: string;
+}
+
+const userToSocketMap: UserToSocketMap = {};
+
+export const setupSocketIO = (io: SocketIOServer): void => {
+  io.use(async (socket: AuthenticatedSocket, next) => {
+    try {
+      const token: string = socket.handshake.auth.token;
+
+      if (!token) {
+        return next(
+          new AppError('Socket Authentication error: No token provided', 401)
+        );
+      }
+
+      const decoded = verifyJWT(token);
+
+      const user = await User.findById(decoded._id);
+
+      if (!user) {
+        throw new AppError('No user found', 401);
+      }
+
+      socket._id = decoded._id;
+      socket.token = token;
+      socket.userName = user.name;
+
+      next();
+    } catch (error) {
+      next(new AppError('Socket Authentication error: Invalid token', 401));
+    }
+  });
+
+  io.on('connection', (socket: AuthenticatedSocket) => {
+    if (socket._id as string) {
+      userToSocketMap[socket._id as string] = socket.id;
+    }
+
+    socket.on('join_chat', async (chatId: string) => {
+      await socket.join(chatId);
+    });
+
+    socket.on(
+      'send_message',
+      async (data: { chatId: string; content: string }) => {
+        try {
+          if (!(socket._id as string)) {
+            throw new AppError('Socket Authentication error: No user ID', 401);
+          }
+          const { chatId, content } = data;
+
+          const chat = await Chat.findById(chatId);
+
+          if (!chat) {
+            throw new AppError('Chat not found', 404);
+          }
+
+          if (
+            chat.sender.toString() !== socket._id &&
+            chat.receiver.toString() !== socket._id
+          ) {
+            throw new AppError('You are not allowed to join this chat', 403);
+          }
+
+          chat.messages.push({
+            sender: new mongoose.Types.ObjectId(socket._id),
+            content,
+            timestamp: new Date(),
+            type: 'text',
+            isRead: false,
+          });
+
+          await chat.save();
+
+          io.to(chatId).emit('receive_message', {
+            chatId,
+            message: {
+              sender: socket._id,
+              senderName: socket.userName,
+              content,
+              timestamp: new Date(),
+              type: 'text',
+              isRead: false,
+            },
+          });
+        } catch (error) {
+          console.error('Error sending message: ', error);
+          socket.emit('error', { message: 'Failed to send message' });
+        }
+      }
+    );
+
+    socket.on('typing', (chatId: string) => {
+      socket.to(chatId).emit('user_typing', {
+        chatId,
+        userId: socket._id,
+        userName: socket.userName,
+      });
+    });
+
+    socket.on('mark_read', async (chatId: string) => {
+      try {
+        if (!(socket._id as string)) {
+          throw new AppError('Socket Authentication error: No user ID', 401);
+        }
+
+        const chat = await Chat.findById(chatId);
+
+        if (!chat) {
+          throw new AppError('Chat not found', 404);
+        }
+
+        let updated = false;
+
+        chat.messages.forEach((message) => {
+          if (
+            !message.sender.equals(new mongoose.Types.ObjectId(socket._id)) &&
+            !message.isRead
+          ) {
+            message.isRead = true;
+            updated = true;
+          }
+        });
+
+        if (updated) {
+          await chat.save();
+          io.to(chatId).emit('messages_read', {
+            chatId,
+            userId: socket._id,
+            userName: socket.userName,
+          });
+        }
+      } catch (error) {
+        console.error('Error marking message as read: ', error);
+        socket.emit('error', { message: 'Failed to mark message as read' });
+      }
+    });
+
+    socket.on('disconnect', () => {
+      if (socket._id as string) {
+        delete userToSocketMap[socket._id as string];
+      }
+    });
+  });
+};
+
+export const getSocketIdFromUserId = (userId: string): string | undefined => {
+  return userToSocketMap[userId];
+};

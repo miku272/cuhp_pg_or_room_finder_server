@@ -15,3 +15,12 @@ export const CORS = (req: Request, res: Response, next: NextFunction): void => {
   }
   next();
 };
+
+export const socketCORS = {
+  origin: '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};

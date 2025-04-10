@@ -1,16 +1,25 @@
+import http from 'http';
+
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import { Server as SocketIOServer } from 'socket.io';
 
 import authRouter from './routes/auth';
 import otpRouter from './routes/otp';
 import propertyRouter from './routes/property';
+import chatRouter from './routes/chat';
 
 import { connectDB } from './db';
+import { setupSocketIO } from './socket';
 
-import { CORS } from './middlewares/CORS';
+import { CORS, socketCORS } from './middlewares/CORS';
 import { errorHandler } from './middlewares/error';
 
 const app = express();
+const server = http.createServer(app);
+const io = new SocketIOServer(server, {
+  cors: socketCORS,
+});
 
 const limiter = rateLimit({
   keyGenerator: (req) => {
@@ -34,17 +43,21 @@ app.use(otpRouter);
 
 app.use(propertyRouter);
 
+app.use('/chat', chatRouter);
+
 app.get('/', (req, res) => {
   res.send('Hello World!!!');
 });
 
 app.use(errorHandler);
 
+setupSocketIO(io);
+
 const startServer = async (): Promise<void> => {
   try {
     await connectDB();
 
-    app.listen(8000, () => {
+    server.listen(8000, () => {
       console.log('Server started on http://localhost:8000');
     });
   } catch (error) {

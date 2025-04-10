@@ -180,6 +180,7 @@ export const tokenAuth = async (
 
     (req as AuthenticatedRequest).token = token;
     (req as AuthenticatedRequest)._id = user._id;
+    (req as AuthenticatedRequest).userName = user.name;
 
     next();
   } catch (error) {

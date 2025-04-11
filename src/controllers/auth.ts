@@ -20,7 +20,7 @@ export const signupUsingEmailAndPassword = async (
     }
 
     const user = await User.create({ name, email, password });
-    const token = generateJWT(user._id, user.name, user.email as string);
+    const token = generateJWT(user._id);
 
     res.status(201).json({
       status: 'success',
@@ -51,7 +51,7 @@ export const loginUsingEmailAndPassword = async (
       throw new AppError('Invalid password', 401);
     }
 
-    const token = generateJWT(user._id, user.name, user.email as string);
+    const token = generateJWT(user._id);
 
     res.status(200).json({
       status: 'success',
@@ -77,7 +77,7 @@ export const signupUsingPhoneAndPassword = async (
     }
 
     const user = await User.create({ name, phone, password });
-    const token = generateJWT(user._id, user.name, user.phone as string);
+    const token = generateJWT(user._id);
 
     res.status(201).json({
       status: 'success',
@@ -108,7 +108,7 @@ export const loginUsingPhoneAndPassword = async (
       throw new AppError('Invalid password', 401);
     }
 
-    const token = generateJWT(user._id, user.name, user.phone as string);
+    const token = generateJWT(user._id);
 
     res.status(200).json({
       status: 'success',

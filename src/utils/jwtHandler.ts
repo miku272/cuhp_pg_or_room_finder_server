@@ -10,11 +10,7 @@ interface TokenResponse {
   expiresIn: string;
 }
 
-export const generateJWT = (
-  _id: Types.ObjectId | string,
-  name: string,
-  emailOrPhone: string
-): TokenResponse => {
+export const generateJWT = (_id: Types.ObjectId | string): TokenResponse => {
   try {
     if (
       process.env.JWT_SECRET === undefined ||
@@ -31,13 +27,9 @@ export const generateJWT = (
       Date.now() + days * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    const token = jwt.sign(
-      { _id, name, emailOrPhone },
-      process.env.JWT_SECRET,
-      {
-        expiresIn,
-      }
-    );
+    const token = jwt.sign({ _id }, process.env.JWT_SECRET, {
+      expiresIn,
+    });
 
     return { token, expiresIn: expirationDate };
   } catch (error) {

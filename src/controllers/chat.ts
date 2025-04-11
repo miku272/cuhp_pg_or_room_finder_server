@@ -2,8 +2,7 @@ import { Response, NextFunction } from 'express';
 
 import { type AuthenticatedRequest } from '../types/AuthenticatedRequest';
 import { AppError } from '../utils/error';
-import { Chat, Property } from '../models';
-import mongoose from 'mongoose';
+import { Chat, Property, Message } from '../models';
 
 export const initializeChat = async (
   req: AuthenticatedRequest,
@@ -48,7 +47,8 @@ export const initializeChat = async (
       sender: userId,
       receiver: ownerId,
       propertyId: propertyId,
-      messages: [],
+      lastMessage: null,
+      lastMessageTimestamp: new Date(),
     });
 
     res.status(201).json({
@@ -125,9 +125,15 @@ export const getChatById = async (
       throw new AppError('You are not authorized to view this chat', 403);
     }
 
+    const messages = await Message.find({ chatId: chatId })
+      .sort({
+        createdAt: 1,
+      })
+      .populate('sender', 'name');
+
     res.status(200).json({
       status: 'success',
-      data: { chat },
+      data: { chat, messages },
     });
   } catch (error) {
     next(error);
@@ -162,25 +168,24 @@ export const sendMessage = async (
       );
     }
 
-    const newMessage = {
-      sender: new mongoose.Types.ObjectId(userId),
+    const newMessage = await Message.create({
+      chatId: chatId,
+      sender: userId,
       content: content,
-      timestamp: new Date(),
       type: type,
       isRead: false,
-    };
-
-    chat.messages.push(newMessage);
+    });
 
     chat.lastMessage = newMessage;
-    chat.lastMessageTimestamp = newMessage.timestamp;
+    chat.lastMessageTimestamp = newMessage.createdAt;
 
     await chat.save();
 
     res.status(200).json({
       status: 'success',
       data: {
-        message: chat.messages[chat.messages.length - 1],
+        chat,
+        newMessage,
       },
     });
   } catch (error) {

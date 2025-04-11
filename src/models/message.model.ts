@@ -1,36 +1,46 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
-export interface Message {
+export interface Message extends Document {
+  _id: mongoose.Types.ObjectId;
+  chatId: mongoose.Types.ObjectId;
   sender: mongoose.Types.ObjectId;
   content: string;
   type: 'text' | 'image' | 'video' | 'audio' | 'file';
-  timestamp: Date;
   isRead: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export const messageSchema = new mongoose.Schema<Message>({
-  sender: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
+export const messageSchema = new Schema<Message>(
+  {
+    chatId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Chat',
+      required: true,
+      index: true,
+    },
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    content: {
+      type: String,
+      required: true,
+    },
+    type: {
+      type: String,
+      enum: ['text', 'image', 'video', 'audio', 'file'],
+      required: true,
+    },
+    isRead: {
+      type: Boolean,
+      default: false,
+    },
   },
-  content: {
-    type: String,
-    required: true,
-  },
-  type: {
-    type: String,
-    enum: ['text', 'image', 'video', 'audio', 'file'],
-    required: true,
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now,
-  },
-  isRead: {
-    type: Boolean,
-    default: false,
-  },
-});
+  { timestamps: true }
+);
 
-// export const MessageModel = mongoose.model<Message>('Message', messageSchema);
+messageSchema.index({ chatId: 1, createdAt: -1 });
+
+export const Message = mongoose.model<Message>('Message', messageSchema);

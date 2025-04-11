@@ -4,7 +4,7 @@ import { type AuthenticatedSocket } from '../types/AuthenticatedSocket';
 
 import { AppError } from '../utils/error';
 import { verifyJWT } from '../utils/jwtHandler';
-import { Chat, User } from '../models';
+import { Chat, Message, User } from '../models';
 import mongoose from 'mongoose';
 
 interface UserToSocketMap {
@@ -85,29 +85,28 @@ export const setupSocketIO = (io: SocketIOServer): void => {
             | 'audio'
             | 'file';
 
-          const newMessage = {
+          const newMessage = await Message.create({
+            chatId: chatId,
             sender: new mongoose.Types.ObjectId(socket._id),
             content: content,
-            timestamp: new Date(),
             type: messageType,
             isRead: false,
-          };
-
-          chat.messages.push(newMessage);
+          });
 
           chat.lastMessage = newMessage;
-          chat.lastMessageTimestamp = newMessage.timestamp;
+          chat.lastMessageTimestamp = newMessage.createdAt;
 
           await chat.save();
 
           io.to(chatId).emit('receive_message', {
             chatId,
             message: {
+              _id: newMessage._id,
               sender: socket._id,
               senderName: socket.userName,
               content,
-              timestamp: new Date(),
-              type: 'text',
+              timestamp: newMessage.createdAt,
+              type: messageType,
               isRead: false,
             },
           });
@@ -133,25 +132,38 @@ export const setupSocketIO = (io: SocketIOServer): void => {
         }
 
         const chat = await Chat.findById(chatId);
-
         if (!chat) {
           throw new AppError('Chat not found', 404);
+          return;
         }
 
-        let updated = false;
+        if (
+          chat.sender.toString() !== socket._id &&
+          chat.receiver.toString() !== socket._id
+        ) {
+          throw new AppError('You are not authorized to access this chat', 403);
+          return;
+        }
 
-        chat.messages.forEach((message) => {
-          if (
-            !message.sender.equals(new mongoose.Types.ObjectId(socket._id)) &&
-            !message.isRead
-          ) {
-            message.isRead = true;
-            updated = true;
-          }
-        });
+        const result = await Message.updateMany(
+          {
+            chatId: chatId,
+            sender: { $ne: new mongoose.Types.ObjectId(socket._id) },
+            isRead: false,
+          },
+          { $set: { isRead: true } }
+        );
 
-        if (updated) {
+        if (
+          chat.lastMessage &&
+          !chat.lastMessage.isRead &&
+          chat.lastMessage.sender.toString() !== socket._id.toString()
+        ) {
+          chat.lastMessage.isRead = true;
           await chat.save();
+        }
+
+        if (result.modifiedCount > 0) {
           io.to(chatId).emit('messages_read', {
             chatId,
             userId: socket._id,

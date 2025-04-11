@@ -181,11 +181,24 @@ export const sendMessage = async (
 
     await chat.save();
 
+    const populatedChat = await Chat.findById(chatId)
+      .populate('sender', 'name email phone')
+      .populate('receiver', 'name email phone')
+      .populate(
+        'propertyId',
+        'propertyName propertyAddressLine1 propertyVillageOrCity'
+      );
+
+    const populatedMessage = await Message.findById(newMessage._id).populate(
+      'sender',
+      'name'
+    );
+
     res.status(200).json({
       status: 'success',
       data: {
-        chat,
-        newMessage,
+        chat: populatedChat,
+        newMessage: populatedMessage,
       },
     });
   } catch (error) {

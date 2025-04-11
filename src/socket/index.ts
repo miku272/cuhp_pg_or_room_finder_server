@@ -98,17 +98,22 @@ export const setupSocketIO = (io: SocketIOServer): void => {
 
           await chat.save();
 
+          const populatedChat = await Chat.findById(chatId)
+            .populate('sender', 'name email phone')
+            .populate('receiver', 'name email phone')
+            .populate(
+              'propertyId',
+              'propertyName propertyAddressLine1 propertyVillageOrCity'
+            );
+
+          const populatedMessage = await Message.findById(
+            newMessage._id
+          ).populate('sender', 'name email phone');
+
           io.to(chatId).emit('receive_message', {
             chatId,
-            message: {
-              _id: newMessage._id,
-              sender: socket._id,
-              senderName: socket.userName,
-              content,
-              timestamp: newMessage.createdAt,
-              type: messageType,
-              isRead: false,
-            },
+            chat: populatedChat,
+            message: populatedMessage,
           });
         } catch (error) {
           console.error('Error sending message: ', error);
@@ -163,11 +168,21 @@ export const setupSocketIO = (io: SocketIOServer): void => {
           await chat.save();
         }
 
+        const populatedChat = await Chat.findById(chatId)
+          .populate('sender', 'name email phone')
+          .populate('receiver', 'name email phone')
+          .populate(
+            'propertyId',
+            'propertyName propertyAddressLine1 propertyVillageOrCity'
+          );
+
         if (result.modifiedCount > 0) {
           io.to(chatId).emit('messages_read', {
             chatId,
             userId: socket._id,
             userName: socket.userName,
+            chat: populatedChat,
+            count: result.modifiedCount,
           });
         }
       } catch (error) {

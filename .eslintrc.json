@@ -24,6 +24,7 @@
     "@typescript-eslint/no-unused-vars": "error",
     "@typescript-eslint/strict-boolean-expressions": "error",
     "@typescript-eslint/no-floating-promises": "error",
-    "no-console": "warn"
+    "no-console": "warn",
+    "prettier/prettier": ["error", { "endOfLine": "auto" }]
   }
 }

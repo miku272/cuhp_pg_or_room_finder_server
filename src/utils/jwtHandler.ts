@@ -1,4 +1,4 @@
-import jwt, { JwtPayload } from 'jsonwebtoken';
+import jwt, { JwtPayload, SignOptions } from 'jsonwebtoken';
 import { Types } from 'mongoose';
 import dotenv from 'dotenv';
 import { AppError } from './error';
@@ -27,9 +27,13 @@ export const generateJWT = (_id: Types.ObjectId | string): TokenResponse => {
       Date.now() + days * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    const token = jwt.sign({ _id }, process.env.JWT_SECRET as string, {
-      expiresIn,
-    });
+    const signOptions: SignOptions = { expiresIn };
+
+    const token = jwt.sign(
+      { _id },
+      process.env.JWT_SECRET as string,
+      signOptions
+    );
 
     return { token, expiresIn: expirationDate };
   } catch (error) {

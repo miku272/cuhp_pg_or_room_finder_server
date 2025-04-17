@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 
 import { AppError } from '../utils/error';
 
-interface User extends Document {
+export interface User extends Document {
   _id: mongoose.Types.ObjectId;
   email: string | null;
   phone: string | null;

@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { User } from './user.model';
 
 const UNIVERSITY_COORDINATES = {
   lat: 32.22449,
@@ -7,7 +8,7 @@ const UNIVERSITY_COORDINATES = {
 
 interface Property extends Document {
   _id: mongoose.Types.ObjectId;
-  owner: mongoose.Types.ObjectId;
+  owner: mongoose.Types.ObjectId | User;
   propertyName: string;
   propertyAddressLine1: string;
   propertyAddressLine2: undefined | null | string;

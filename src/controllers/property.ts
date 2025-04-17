@@ -324,11 +324,11 @@ export const getPropertiesByPagination = async (
 
     // Populate owner details if needed
     if (req.query.includeOwner === 'true') {
-      query = query.populate('owner', 'name email phone');
+      query = query.populate<{ owner: User }>('owner', 'name email phone');
     }
 
     // Execute query
-    const properties = await query;
+    const properties: Property[] = await query.exec();
 
     // Get total count for pagination info
     const totalCount = await countQuery.countDocuments();

@@ -27,7 +27,7 @@ export const generateJWT = (_id: Types.ObjectId | string): TokenResponse => {
       Date.now() + days * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    const token = jwt.sign({ _id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ _id }, process.env.JWT_SECRET as string, {
       expiresIn,
     });
 

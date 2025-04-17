@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "scripts": {
     "lint": "eslint \"src/**/*.ts\"",
@@ -14,7 +14,7 @@
     "test:coverage": "jest --coverage",
     "dev": "npx nodemon",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/src/index.js"
   },
   "keywords": [],
   "author": "Naresh Sharma",

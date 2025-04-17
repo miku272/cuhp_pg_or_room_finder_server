@@ -6,7 +6,7 @@ const UNIVERSITY_COORDINATES = {
   lng: 76.156601,
 };
 
-interface Property extends Document {
+export interface Property extends Document {
   _id: mongoose.Types.ObjectId;
   owner: mongoose.Types.ObjectId | User;
   propertyName: string;

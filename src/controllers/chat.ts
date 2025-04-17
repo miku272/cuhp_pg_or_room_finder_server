@@ -32,7 +32,13 @@ export const initializeChat = async (
     const existingChat = await Chat.findOne({
       $or: [{ sender: userId }, { receiver: userId }],
       propertyId: propertyId,
-    });
+    })
+      .populate('sender', 'name email phone')
+      .populate('receiver', 'name email phone')
+      .populate(
+        'property',
+        'propertyName propertyAddressLine1 propertyVillageOrCity'
+      );
 
     if (existingChat) {
       res.status(200).json({
@@ -46,14 +52,22 @@ export const initializeChat = async (
     const newChat = await Chat.create({
       sender: userId,
       receiver: ownerId,
-      propertyId: propertyId,
+      property: propertyId,
       lastMessage: null,
-      lastMessageTimestamp: new Date(),
+      lastMessageTimestamp: null,
     });
+
+    const populatedNewChat = await Chat.findOne(newChat._id)
+      .populate('sender', 'name email phone')
+      .populate('receiver', 'name email phone')
+      .populate(
+        'property',
+        'propertyName propertyAddressLine1 propertyVillageOrCity'
+      );
 
     res.status(201).json({
       status: 'success',
-      data: { chat: newChat },
+      data: { chat: populatedNewChat },
     });
   } catch (error) {
     next(error);
@@ -78,7 +92,7 @@ export const getUserChats = async (
       .populate('sender', 'name email phone')
       .populate('receiver', 'name email phone')
       .populate(
-        'propertyId',
+        'property',
         'propertyName propertyAddressLine1 propertyVillageOrCity'
       )
       .sort({ updatedAt: -1 });
@@ -110,7 +124,7 @@ export const getChatById = async (
       .populate('sender', 'name email phone')
       .populate('receiver', 'name email phone')
       .populate(
-        'propertyId',
+        'property',
         'propertyName propertyAddressLine1 propertyVillageOrCity'
       );
 
@@ -125,15 +139,9 @@ export const getChatById = async (
       throw new AppError('You are not authorized to view this chat', 403);
     }
 
-    const messages = await Message.find({ chatId: chatId })
-      .sort({
-        createdAt: 1,
-      })
-      .populate('sender', 'name');
-
     res.status(200).json({
       status: 'success',
-      data: { chat, messages },
+      data: { chat },
     });
   } catch (error) {
     next(error);
@@ -185,7 +193,7 @@ export const sendMessage = async (
       .populate('sender', 'name email phone')
       .populate('receiver', 'name email phone')
       .populate(
-        'propertyId',
+        'property',
         'propertyName propertyAddressLine1 propertyVillageOrCity'
       );
 
@@ -200,6 +208,62 @@ export const sendMessage = async (
         chat: populatedChat,
         newMessage: populatedMessage,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMessagesByChatId = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req._id;
+    const { chatId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const skip = (page - 1) * limit;
+
+    if (userId == undefined || userId == null || userId === '') {
+      throw new AppError('Not Authenticated', 401);
+    }
+
+    const chat = await Chat.findById(chatId)
+      .populate('sender', 'name email phone')
+      .populate('receiver', 'name email phone')
+      .populate(
+        'property',
+        'propertyName propertyAddressLine1 propertyVillageOrCity'
+      );
+
+    if (!chat) {
+      throw new AppError('Chat not found', 404);
+    }
+    if (
+      chat.sender._id.toString() !== userId.toString() &&
+      chat.receiver._id.toString() !== userId.toString()
+    ) {
+      throw new AppError('You are not authorized to view this chat', 403);
+    }
+
+    // Get total count for pagination
+    const totalMessages = await Message.countDocuments({ chatId: chatId });
+
+    const messages = await Message.find({ chatId: chatId })
+      .populate('sender', 'name email phone')
+      .sort({ createdAt: -1 }) // Sort by creation date, newest first
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      status: 'success',
+      resultsLength: messages.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalMessages / limit),
+      totalMessages: totalMessages,
+      data: { chat, messages },
     });
   } catch (error) {
     next(error);

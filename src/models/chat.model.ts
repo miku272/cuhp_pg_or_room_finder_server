@@ -6,7 +6,7 @@ interface Chat extends Document {
   _id: mongoose.Types.ObjectId;
   sender: mongoose.Types.ObjectId;
   receiver: mongoose.Types.ObjectId;
-  propertyId?: mongoose.Types.ObjectId;
+  property?: mongoose.Types.ObjectId;
   lastMessage?: undefined | null | Message;
   lastMessageTimestamp?: undefined | null | Date;
   createdAt: Date;
@@ -25,7 +25,7 @@ const chatSchema = new Schema<Chat>(
       ref: 'User',
       required: true,
     },
-    propertyId: {
+    property: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Property',
     },

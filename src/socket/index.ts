@@ -102,7 +102,7 @@ export const setupSocketIO = (io: SocketIOServer): void => {
             .populate('sender', 'name email phone')
             .populate('receiver', 'name email phone')
             .populate(
-              'propertyId',
+              'property',
               'propertyName propertyAddressLine1 propertyVillageOrCity'
             );
 
@@ -147,7 +147,6 @@ export const setupSocketIO = (io: SocketIOServer): void => {
           chat.receiver.toString() !== socket._id
         ) {
           throw new AppError('You are not authorized to access this chat', 403);
-          return;
         }
 
         const result = await Message.updateMany(
@@ -172,7 +171,7 @@ export const setupSocketIO = (io: SocketIOServer): void => {
           .populate('sender', 'name email phone')
           .populate('receiver', 'name email phone')
           .populate(
-            'propertyId',
+            'property',
             'propertyName propertyAddressLine1 propertyVillageOrCity'
           );
 

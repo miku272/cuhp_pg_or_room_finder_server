@@ -4,15 +4,18 @@ import { tokenAuth } from '../middlewares/auth';
 
 import {
   getChatById,
+  getMessagesByChatId,
   getUserChats,
   initializeChat,
   sendMessage,
 } from '../controllers/chat';
 import {
   getChatByIdValidation,
+  getMessagesByChatIdValidation,
   initializeChatValidation,
   sendMessageValidation,
   validateGetChatByIdRequest,
+  validateGetMessagesRequest,
   validateInitializeChatRequest,
   validateSendMessageRequest,
 } from '../middlewares/chat';
@@ -29,6 +32,13 @@ chatRouter.get(
   getChatByIdValidation,
   validateGetChatByIdRequest,
   getChatById
+);
+chatRouter.get(
+  '/messages/:chatId',
+  tokenAuth,
+  getMessagesByChatIdValidation,
+  validateGetMessagesRequest,
+  getMessagesByChatId
 );
 
 chatRouter.post(

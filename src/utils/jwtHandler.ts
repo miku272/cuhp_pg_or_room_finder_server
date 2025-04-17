@@ -20,14 +20,34 @@ export const generateJWT = (_id: Types.ObjectId | string): TokenResponse => {
       throw new AppError('JWT_SECRET is not defined', 500);
     }
 
-    const expiresIn = process.env.JWT_EXPIRES_IN ?? '30d';
-    const days = parseInt(expiresIn.replace('d', ''));
+    const expiresInString = process.env.JWT_EXPIRES_IN ?? '30d';
 
+    // Convert expiresInString to seconds for jwt.sign
+    let expiresInSeconds: number;
+    if (expiresInString.endsWith('d')) {
+      const days = parseInt(expiresInString.replace('d', ''), 10);
+      expiresInSeconds = days * 24 * 60 * 60;
+    } else if (expiresInString.endsWith('h')) {
+      const hours = parseInt(expiresInString.replace('h', ''), 10);
+      expiresInSeconds = hours * 60 * 60;
+    } else if (expiresInString.endsWith('m')) {
+      const minutes = parseInt(expiresInString.replace('m', ''), 10);
+      expiresInSeconds = minutes * 60;
+    } else {
+      // Attempt to parse as seconds directly, default if invalid
+      expiresInSeconds = parseInt(expiresInString, 10);
+      if (isNaN(expiresInSeconds)) {
+        expiresInSeconds = 30 * 24 * 60 * 60; // Default: 30 days in seconds
+      }
+    }
+
+    // Calculate the actual expiration date string to return
     const expirationDate = new Date(
-      Date.now() + days * 24 * 60 * 60 * 1000
+      Date.now() + expiresInSeconds * 1000
     ).toISOString();
 
-    const signOptions: SignOptions = { expiresIn };
+    // Use the numeric value (seconds) for signOptions
+    const signOptions: SignOptions = { expiresIn: expiresInSeconds };
 
     const token = jwt.sign(
       { _id },

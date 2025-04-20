@@ -15,6 +15,8 @@ import { setupSocketIO } from './socket';
 import { CORS, socketCORS } from './middlewares/CORS';
 import { errorHandler } from './middlewares/error';
 
+const port = process.env.PORT ?? 8000;
+
 const app = express();
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
@@ -57,7 +59,7 @@ const startServer = async (): Promise<void> => {
   try {
     await connectDB();
 
-    server.listen(8000, () => {
+    server.listen(port, () => {
       console.log('Server started on http://localhost:8000');
     });
   } catch (error) {

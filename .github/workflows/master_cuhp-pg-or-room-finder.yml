@@ -21,21 +21,37 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '22.x'
+          node-version: '22.x' # Ensure this matches your package.json engine
 
-      - name: npm install, build, and test
+      - name: npm install and build
         run: |
           npm install
           npm run build --if-present
+          # Optionally prune dev dependencies if needed, Azure usually handles this
+          # npm prune --production
+
+      # Create a deployment package directory
+      - name: Create deployment package
+        run: |
+          mkdir deployment_package
+          cp -r dist deployment_package/dist
+          cp package.json deployment_package/package.json
+          cp package-lock.json deployment_package/package-lock.json
+          # Add any other necessary files like .env.example or static assets here
+          # cp .env.example deployment_package/.env.example
 
       - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+        # Zip the contents of the deployment_package directory
+        run: |
+          cd deployment_package
+          zip ../release.zip ./* -r
+          cd ..
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: release.zip
+          path: release.zip # Upload the zip file
 
   deploy:
     runs-on: ubuntu-latest
@@ -52,9 +68,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
+          # No path needed, downloads to the root
 
       - name: Unzip artifact for deployment
-        run: unzip release.zip
+        run: unzip release.zip -d deployment_package # Unzip into a specific directory
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -69,4 +86,6 @@ jobs:
         with:
           app-name: 'cuhp-pg-or-room-finder'
           slot-name: 'Production'
-          package: ./dist
+          package: ./deployment_package # Deploy the directory containing dist, package.json etc.
+          # Azure will detect package.json and run npm install
+          # It will use the start script from package.json: "node dist/src/index.js"

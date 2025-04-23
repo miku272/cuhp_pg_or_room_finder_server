@@ -21,7 +21,7 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '22.x' # Ensure this matches your package.json engine
+          node-version: '22.x' # Ensure this matches the package.json engine
 
       - name: npm install and build
         run: |

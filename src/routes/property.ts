@@ -10,9 +10,11 @@ import {
 } from '../middlewares/property';
 import {
   addProperty,
+  getPropertiesActiveAndInactiveCount,
   getPropertiesById,
   getPropertiesByPagination,
   getPropertyById,
+  getTotalPropertiesCount,
   togglePropertyActivation,
   updateProperty,
 } from '../controllers/property';
@@ -35,6 +37,18 @@ propertyRouter.get(
   '/toggle-property-activation/:propertyId',
   tokenAuth,
   togglePropertyActivation
+);
+
+propertyRouter.get(
+  '/get-total-properties-count',
+  tokenAuth,
+  getTotalPropertiesCount
+);
+
+propertyRouter.get(
+  '/get-properties-active-and-inactive-count',
+  tokenAuth,
+  getPropertiesActiveAndInactiveCount
 );
 
 propertyRouter.post(

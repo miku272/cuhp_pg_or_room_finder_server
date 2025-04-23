@@ -216,6 +216,64 @@ export const getPropertiesById = async (
   }
 };
 
+export const getTotalPropertiesCount = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req._id;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    const totalPropertiesCount = await Property.countDocuments({
+      owner: userId,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: { totalPropertiesCount },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPropertiesActiveAndInactiveCount = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req._id;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    const [activePropertyCount, inactivePropertyCount] = await Promise.all([
+      Property.countDocuments({ owner: userId, isActive: true }),
+      Property.countDocuments({ owner: userId, isActive: false }),
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        activePropertyCount,
+        inactivePropertyCount,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getPropertiesByPagination = async (
   req: AuthenticatedRequest,
   res: Response,

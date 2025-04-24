@@ -1,9 +1,12 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface Message extends Document {
+import { IUser } from './user.model';
+import { IChat } from './chat.model';
+
+export interface IMessage extends Document {
   _id: mongoose.Types.ObjectId;
-  chatId: mongoose.Types.ObjectId;
-  sender: mongoose.Types.ObjectId;
+  chatId: mongoose.Types.ObjectId | IChat;
+  sender: mongoose.Types.ObjectId | IUser;
   content: string;
   type: 'text' | 'image' | 'video' | 'audio' | 'file';
   isRead: boolean;
@@ -11,7 +14,7 @@ export interface Message extends Document {
   updatedAt: Date;
 }
 
-export const messageSchema = new Schema<Message>(
+export const messageSchema = new Schema<IMessage>(
   {
     chatId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -43,4 +46,4 @@ export const messageSchema = new Schema<Message>(
 
 messageSchema.index({ chatId: 1, createdAt: -1 });
 
-export const Message = mongoose.model<Message>('Message', messageSchema);
+export const Message = mongoose.model<IMessage>('Message', messageSchema);

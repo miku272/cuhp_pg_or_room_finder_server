@@ -1,19 +1,21 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-import { Message, messageSchema } from './message.model';
+import { IMessage, messageSchema } from './message.model';
+import { IUser } from './user.model';
+import { IProperty } from './property.model';
 
-interface Chat extends Document {
+export interface IChat extends Document {
   _id: mongoose.Types.ObjectId;
-  sender: mongoose.Types.ObjectId;
-  receiver: mongoose.Types.ObjectId;
-  property?: mongoose.Types.ObjectId;
-  lastMessage?: undefined | null | Message;
+  sender: mongoose.Types.ObjectId | IUser;
+  receiver: mongoose.Types.ObjectId | IUser;
+  property?: mongoose.Types.ObjectId | IProperty;
+  lastMessage?: undefined | null | IMessage;
   lastMessageTimestamp?: undefined | null | Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const chatSchema = new Schema<Chat>(
+const chatSchema = new Schema<IChat>(
   {
     sender: {
       type: mongoose.Schema.Types.ObjectId,
@@ -47,4 +49,4 @@ const chatSchema = new Schema<Chat>(
 chatSchema.index({ sender: 1, receiver: 1 });
 chatSchema.index({ propertyId: 1 });
 
-export const Chat = mongoose.model<Chat>('Chat', chatSchema);
+export const Chat = mongoose.model<IChat>('Chat', chatSchema);

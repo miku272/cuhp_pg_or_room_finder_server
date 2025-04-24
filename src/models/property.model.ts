@@ -1,14 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { User } from './user.model';
+import { IUser } from './user.model';
 
 const UNIVERSITY_COORDINATES = {
   lat: 32.22449,
   lng: 76.156601,
 };
 
-export interface Property extends Document {
+export interface IProperty extends Document {
   _id: mongoose.Types.ObjectId;
-  owner: mongoose.Types.ObjectId | User;
+  owner: mongoose.Types.ObjectId | IUser;
   propertyName: string;
   propertyAddressLine1: string;
   propertyAddressLine2: undefined | null | string;
@@ -44,7 +44,7 @@ export interface Property extends Document {
   updatedAt: Date;
 }
 
-const propertySchema = new Schema<Property>(
+const propertySchema = new Schema<IProperty>(
   {
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     propertyName: { type: String, required: true },
@@ -90,7 +90,9 @@ const propertySchema = new Schema<Property>(
   }
 );
 
-propertySchema.virtual('distanceFromUniversity').get(function (this: Property) {
+propertySchema.virtual('distanceFromUniversity').get(function (
+  this: IProperty
+) {
   return calculateDistance(
     this.coordinates.lat,
     this.coordinates.lng,
@@ -127,4 +129,4 @@ function toRad(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 
-export const Property = mongoose.model<Property>('Property', propertySchema);
+export const Property = mongoose.model<IProperty>('Property', propertySchema);

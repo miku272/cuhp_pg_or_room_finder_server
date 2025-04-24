@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 
 import { AppError } from '../utils/error';
 
-export interface User extends Document {
+export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   email: string | null;
   phone: string | null;
@@ -15,7 +15,7 @@ export interface User extends Document {
   isPhoneVerified: boolean;
   phoneOtp?: string | null;
   phoneOtpExpires?: Date | null;
-  property?: undefined | null | mongoose.Types.ObjectId[];
+  property: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -23,7 +23,7 @@ export interface User extends Document {
   isPhoneOtpValid(candidatePhoneOtp: string): Promise<boolean>;
 }
 
-const userSchema = new Schema<User>(
+const userSchema = new Schema<IUser>(
   {
     email: {
       type: String,
@@ -89,6 +89,7 @@ const userSchema = new Schema<User>(
       {
         type: Schema.Types.ObjectId,
         ref: 'property',
+        default: [],
       },
     ],
   },
@@ -238,4 +239,4 @@ userSchema.pre('save', async function (next) {
   }
 });
 
-export const User = mongoose.model<User>('User', userSchema);
+export const User = mongoose.model<IUser>('User', userSchema);

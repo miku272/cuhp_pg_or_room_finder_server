@@ -16,7 +16,6 @@ export interface User extends Document {
   phoneOtp?: string | null;
   phoneOtpExpires?: Date | null;
   property?: undefined | null | mongoose.Types.ObjectId[];
-  rooms?: undefined | null | mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -90,12 +89,6 @@ const userSchema = new Schema<User>(
       {
         type: Schema.Types.ObjectId,
         ref: 'property',
-      },
-    ],
-    rooms: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'Room',
       },
     ],
   },

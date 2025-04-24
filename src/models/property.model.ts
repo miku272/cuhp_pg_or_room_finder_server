@@ -38,7 +38,6 @@ export interface Property extends Document {
         parking: boolean;
       };
   images: undefined | null | string[];
-  rooms: undefined | null | mongoose.Types.ObjectId[];
   isVerified: boolean;
   isActive: boolean;
   createdAt: Date;
@@ -81,7 +80,6 @@ const propertySchema = new Schema<Property>(
       parking: { type: Boolean, default: false },
     },
     images: [{ type: String }],
-    rooms: [{ type: Schema.Types.ObjectId, ref: 'Room' }],
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
   },

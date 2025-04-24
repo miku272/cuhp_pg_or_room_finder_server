@@ -15,6 +15,7 @@ import { setupSocketIO } from './socket';
 
 import { CORS, socketCORS } from './middlewares/CORS';
 import { errorHandler } from './middlewares/error';
+import routeNotFoundTemplate from './template/routeNotFound';
 
 const port = process.env.PORT ?? 8000;
 
@@ -52,6 +53,12 @@ app.use('/review', reviewRouter);
 
 app.get('/', (req, res) => {
   res.send('Hello World!!!');
+});
+
+app.use((req, res) => {
+  const htmlContent = routeNotFoundTemplate(req.method, req.originalUrl);
+
+  res.status(404).send(htmlContent);
 });
 
 app.use(errorHandler);

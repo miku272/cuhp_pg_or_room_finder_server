@@ -4,16 +4,38 @@ import { tokenAuth } from '../middlewares/auth';
 import {
   addReviewValidation,
   getReviewByIdValidation,
+  propertyIdParamValidation,
+  updateReviewValidation,
   validateAddReviewRequest,
   validateGetReviewByIdRequest,
+  validatePropertyIdParamRequest,
+  validateUpdateReviewRequest,
 } from '../middlewares/review';
-import { addReview, getReviewById } from '../controllers/review';
+import {
+  addReview,
+  deleteReviewById,
+  deleteReviewByPropertyId,
+  getReviewById,
+  getReviewByPropertyId,
+  getReviewsByUserId,
+  updateReviewById,
+} from '../controllers/review';
 
 const reviewRouter = Router();
 
 reviewRouter.get('/', (req, res) => {
   res.send('Review route up and running');
 });
+
+reviewRouter.get('/user', tokenAuth, getReviewsByUserId);
+
+reviewRouter.get(
+  '/property/:propertyId',
+  tokenAuth,
+  propertyIdParamValidation,
+  validatePropertyIdParamRequest,
+  getReviewByPropertyId
+);
 
 reviewRouter.get(
   '/:reviewId',
@@ -29,6 +51,30 @@ reviewRouter.post(
   addReviewValidation,
   validateAddReviewRequest,
   addReview
+);
+
+reviewRouter.patch(
+  '/:reviewId',
+  tokenAuth,
+  updateReviewValidation,
+  validateUpdateReviewRequest,
+  updateReviewById
+);
+
+reviewRouter.delete(
+  '/:reviewId',
+  tokenAuth,
+  getReviewByIdValidation,
+  validateGetReviewByIdRequest,
+  deleteReviewById
+);
+
+reviewRouter.delete(
+  '/property/:propertyId',
+  tokenAuth,
+  propertyIdParamValidation,
+  validatePropertyIdParamRequest,
+  deleteReviewByPropertyId
 );
 
 export default reviewRouter;

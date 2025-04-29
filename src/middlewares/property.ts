@@ -93,15 +93,35 @@ export const addPropertyValidation: ValidationChain[] = [
 
   body('coordinates')
     .isObject()
-    .withMessage('Coordinates are required and should be object'),
+    .withMessage('Coordinates are required and should be an object')
+    .custom((value) => {
+      if (
+        value.type === undefined ||
+        value.type === null ||
+        value.type !== 'Point'
+      ) {
+        throw new Error('Coordinates type must be "Point"');
+      }
+      if (
+        value.coordinates === undefined ||
+        value.coordinates === null ||
+        !Array.isArray(value.coordinates) ||
+        value.coordinates.length !== 2
+      ) {
+        throw new Error(
+          'Coordinates must be an array of two numbers [longitude, latitude]'
+        );
+      }
+      return true;
+    }),
 
-  body('coordinates.lat')
-    .isFloat({ min: -90, max: 90 })
-    .withMessage('Latitude must be between -90 and 90'),
-
-  body('coordinates.lng')
+  body('coordinates.coordinates.0') // Longitude
     .isFloat({ min: -180, max: 180 })
     .withMessage('Longitude must be between -180 and 180'),
+
+  body('coordinates.coordinates.1') // Latitude
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Latitude must be between -90 and 90'),
 
   body('services')
     .optional()
@@ -248,15 +268,35 @@ export const updatePropertyValidation: ValidationChain[] = [
 
   body('coordinates')
     .isObject()
-    .withMessage('Coordinates are required and should be object'),
+    .withMessage('Coordinates are required and should be an object')
+    .custom((value) => {
+      if (
+        value.type === undefined ||
+        value.type === null ||
+        value.type !== 'Point'
+      ) {
+        throw new Error('Coordinates type must be "Point"');
+      }
+      if (
+        value.coordinates === undefined ||
+        value.coordinates === null ||
+        !Array.isArray(value.coordinates) ||
+        value.coordinates.length !== 2
+      ) {
+        throw new Error(
+          'Coordinates must be an array of two numbers [longitude, latitude]'
+        );
+      }
+      return true;
+    }),
 
-  body('coordinates.lat')
-    .isFloat({ min: -90, max: 90 })
-    .withMessage('Latitude must be between -90 and 90'),
-
-  body('coordinates.lng')
+  body('coordinates.coordinates.0') // Longitude
     .isFloat({ min: -180, max: 180 })
     .withMessage('Longitude must be between -180 and 180'),
+
+  body('coordinates.coordinates.1') // Latitude
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Latitude must be between -90 and 90'),
 
   body('services')
     .optional()

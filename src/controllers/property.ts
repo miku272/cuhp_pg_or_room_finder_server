@@ -6,6 +6,8 @@ import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 import { Property } from '../models';
 import { User } from '../models';
 import { AppError } from '../utils/error';
+import { FilterQuery } from 'mongoose';
+import { IProperty } from '../models/property.model';
 
 export const addProperty = async (
   req: AuthenticatedRequest,
@@ -279,119 +281,103 @@ export const getPropertiesByPagination = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  // try {
-  //   // Default pagination values
-  //   const page = parseInt(req.query.page as string) || 1;
-  //   const limit = parseInt(req.query.limit as string) || 10;
-  //   const skip = (page - 1) * limit;
-  //   // Build query based on filter options
-  //   const queryObj = { ...req.query };
-  //   // Exclude pagination fields from filtering
-  //   const excludedFields = ['page', 'limit', 'sort', 'fields', 'near'];
-  //   excludedFields.forEach((field) => delete queryObj[field]);
-  //   // Advanced filtering for comparison operators
-  //   let queryStr = JSON.stringify(queryObj);
-  //   queryStr = queryStr.replace(
-  //     /\b(gt|gte|lt|lte|eq|ne|in)\b/g,
-  //     (match) => `$${match}`
-  //   );
-  //   const parsedQuery = JSON.parse(queryStr);
-  //   // Special handling for service-related filters
-  //   const serviceFields = [
-  //     'food',
-  //     'electricity',
-  //     'water',
-  //     'internet',
-  //     'laundry',
-  //     'parking',
-  //   ];
-  //   serviceFields.forEach((field) => {
-  //     if (field in parsedQuery && parsedQuery[field] !== undefined) {
-  //       parsedQuery[`services.${field}`] = parsedQuery[field] === 'true';
-  //       delete parsedQuery[field];
-  //     }
-  //   });
-  //   // Create base query
-  //   let query = Property.find(parsedQuery);
-  //   // Handle proximity search if 'near' parameter is provided
-  //   if (req.query.near !== undefined && req.query.near !== null) {
-  //     const [latStr, lngStr, maxDistanceStr] = (req.query.near as string).split(
-  //       ','
-  //     );
-  //     const lat = Number(latStr);
-  //     const lng = Number(lngStr);
-  //     const maxDistance = Number(maxDistanceStr);
-  //     // Validate coordinates
-  //     if (!isNaN(lat) && !isNaN(lng)) {
-  //       // Add virtual distance field for sorting and filtering
-  //       query = query.find({
-  //         coordinates: {
-  //           $near: {
-  //             $geometry: {
-  //               type: 'Point',
-  //               coordinates: [lng, lat], // MongoDB uses [longitude, latitude] order
-  //             },
-  //             $maxDistance: !isNaN(maxDistance) ? maxDistance * 1000 : 5000, // Default 5km if not specified
-  //           },
-  //         },
-  //       });
-  //     }
-  //   }
-  //   // Apply pagination
-  //   const countQuery = Property.find(parsedQuery); // Clone query for counting without pagination
-  //   query = query.skip(skip).limit(limit);
-  //   // Apply sorting if specified
-  //   if (
-  //     req.query.sort !== undefined &&
-  //     req.query.sort !== null &&
-  //     typeof req.query.sort === 'string'
-  //   ) {
-  //     const sortBy = (req.query.sort as string).split(',').join(' ');
-  //     query = query.sort(sortBy);
-  //   } else {
-  //     // Default sort by creation date, newest first
-  //     query = query.sort('-createdAt');
-  //   }
-  //   // Field limiting if specified
-  //   if (
-  //     req.query.fields !== undefined &&
-  //     req.query.fields !== null &&
-  //     typeof req.query.fields === 'string'
-  //   ) {
-  //     const fields = req.query.fields.split(',').join(' ');
-  //     query = query.select(fields);
-  //   } else {
-  //     // Exclude '__v' field by default
-  //     query = query.select('-__v');
-  //   }
-  //   // Populate rooms if needed
-  //   if (req.query.includeRooms === 'true') {
-  //     query = query.populate('rooms');
-  //   }
-  //   // Populate owner details if needed
-  //   if (req.query.includeOwner === 'true') {
-  //     query = query.populate<{ owner: User }>('owner', 'name email phone');
-  //   }
-  //   // Execute query
-  //   const properties: Property[] = await query.exec();
-  //   // Get total count for pagination info
-  //   const totalCount = await countQuery.countDocuments();
-  //   const totalPages = Math.ceil(totalCount / limit);
-  //   // Return response with pagination metadata
-  //   res.status(200).json({
-  //     status: 'success',
-  //     resultsLength: properties.length,
-  //     pagination: {
-  //       totalCount,
-  //       totalPages,
-  //       currentPage: page,
-  //       limit,
-  //       hasNextPage: page < totalPages,
-  //       hasPrevPage: page > 1,
-  //     },
-  //     data: { properties },
-  //   });
-  // } catch (error) {
-  //   next(error);
-  // }
+  try {
+    // 1. Extract and Parse Query Parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const {
+      minPrice,
+      maxPrice,
+      // maxDistance, // See note below about distance filtering
+      propertyType,
+      genderAllowance,
+      services, // Expecting comma-separated string e.g., "food,water,internet"
+      rentAgreementAvailable,
+      isVerified,
+      // nearMeLat, // For near me filter
+      // nearMeLng, // For near me filter
+      // nearMeRadius = 10, // Default radius in km for near me
+    } = req.query;
+
+    // 2. Build Filter Object
+    const filter: FilterQuery<IProperty> = { isActive: true }; // Start with only active properties
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      filter.pricePerMonth = {};
+      if (minPrice !== undefined) {
+        filter.pricePerMonth.$gte = parseInt(minPrice as string);
+      }
+      if (maxPrice !== undefined) {
+        filter.pricePerMonth.$lte = parseInt(maxPrice as string);
+      }
+    }
+
+    if (propertyType !== undefined) {
+      filter.propertyType = propertyType as string;
+    }
+
+    if (genderAllowance !== undefined) {
+      filter.propertyGenderAllowance = genderAllowance as string;
+    }
+
+    if (services !== undefined) {
+      const serviceList = (services as string).split(',');
+      serviceList.forEach((service) => {
+        if (service.trim()) {
+          filter[`services.${service.trim()}`] = true;
+        }
+      });
+    }
+
+    if (rentAgreementAvailable !== undefined) {
+      filter.rentAgreementAvailable =
+        (rentAgreementAvailable as string).toLowerCase() === 'true';
+    }
+
+    if (isVerified !== undefined) {
+      filter.isVerified = (isVerified as string).toLowerCase() === 'true';
+    }
+
+    // --- Note on Distance Filtering ---
+    // Efficient distance filtering (maxDistance from university or nearMe)
+    // requires a geospatial index on the 'coordinates' field (e.g., converting it
+    // to a GeoJSON Point and creating a '2dsphere' index).
+    // Without it, filtering by distance server-side involves either:
+    // 1. Complex $expr queries (less performant).
+    // 2. Fetching all documents matching other filters, calculating distance in Node.js,
+    //    then filtering/sorting (inefficient, breaks pagination accuracy).
+    // This implementation skips server-side distance filtering for performance.
+    // The client can use the returned coordinates or 'distanceFromUniversity' virtual
+    // for display or client-side filtering if needed.
+    // If implementing 'nearMe' or 'maxDistance' filtering server-side is crucial,
+    // consider updating the schema and using $geoWithin or $nearSphere queries.
+
+    // 3. Execute Queries
+    const properties = await Property.find(filter)
+      .skip(skip)
+      .limit(limit)
+      .select('-__v'); // Exclude version key
+
+    const totalProperties = await Property.countDocuments(filter);
+
+    // 4. Calculate Pagination Metadata
+    const totalPages = Math.ceil(totalProperties / limit);
+
+    // 5. Send Response
+    res.status(200).json({
+      status: 'success',
+      results: properties.length,
+      pagination: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalProperties: totalProperties,
+        limit: limit,
+      },
+      data: { properties },
+    });
+  } catch (error) {
+    next(error);
+  }
 };

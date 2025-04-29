@@ -2,8 +2,8 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { IUser } from './user.model';
 
 const UNIVERSITY_COORDINATES = {
-  lat: 32.22449,
-  lng: 76.156601,
+  type: 'Point',
+  coordinates: [76.156601, 32.22449], // [lng, lat]
 };
 
 export interface IProperty extends Document {
@@ -22,8 +22,8 @@ export interface IProperty extends Document {
   propertyGenderAllowance: 'boys' | 'girls' | 'co-ed';
   rentAgreementAvailable: undefined | null | boolean;
   coordinates: {
-    lat: number;
-    lng: number;
+    type: 'Point';
+    coordinates: [number, number]; // [lng, lat]
   };
   // distanceFromUniversity: number;
   services:
@@ -67,8 +67,11 @@ const propertySchema = new Schema<IProperty>(
     },
     rentAgreementAvailable: { type: Boolean, default: false },
     coordinates: {
-      lat: { type: Number, required: true },
-      lng: { type: Number, required: true },
+      type: { type: String, enum: ['Point'], required: true },
+      coordinates: {
+        type: [Number],
+        required: true,
+      },
     },
     // distanceFromUniversity: { type: Number },
     services: {
@@ -90,14 +93,26 @@ const propertySchema = new Schema<IProperty>(
   }
 );
 
+propertySchema.index({ coordinates: '2dsphere' });
+
 propertySchema.virtual('distanceFromUniversity').get(function (
   this: IProperty
 ) {
+  if (
+    this.coordinates === undefined ||
+    this.coordinates === null ||
+    this.coordinates.coordinates === undefined ||
+    this.coordinates.coordinates === null ||
+    this.coordinates.coordinates.length !== 2
+  ) {
+    return null;
+  }
+
   return calculateDistance(
-    this.coordinates.lat,
-    this.coordinates.lng,
-    UNIVERSITY_COORDINATES.lat,
-    UNIVERSITY_COORDINATES.lng
+    this.coordinates.coordinates[1],
+    this.coordinates.coordinates[0],
+    UNIVERSITY_COORDINATES.coordinates[1] as number,
+    UNIVERSITY_COORDINATES.coordinates[0] as number
   );
 });
 

@@ -3,10 +3,10 @@ import { Response, NextFunction } from 'express';
 
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 
-import { Property } from '../models';
+import { Property, UNIVERSITY_COORDINATES } from '../models';
 import { User } from '../models';
 import { AppError } from '../utils/error';
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, PipelineStage } from 'mongoose';
 import { IProperty } from '../models/property.model';
 
 export const addProperty = async (
@@ -276,12 +276,24 @@ export const getPropertiesActiveAndInactiveCount = async (
   }
 };
 
+interface AggregationFacetResult {
+  data: IProperty[];
+  metadata: [{ totalProperties: number }] | [];
+}
+
 export const getPropertiesByPagination = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
+    const userId = req._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
     // 1. Extract and Parse Query Parameters
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -290,79 +302,192 @@ export const getPropertiesByPagination = async (
     const {
       minPrice,
       maxPrice,
-      // maxDistance, // See note below about distance filtering
+      maxDistance, // Max distance from university in KM
       propertyType,
       genderAllowance,
       services, // Expecting comma-separated string e.g., "food,water,internet"
       rentAgreementAvailable,
       isVerified,
-      // nearMeLat, // For near me filter
-      // nearMeLng, // For near me filter
-      // nearMeRadius = 10, // Default radius in km for near me
+      nearMeLat, // Latitude for near me filter
+      nearMeLng, // Longitude for near me filter
+      nearMeRadius = 10, // Default radius in km for near me
+      sortBy = 'distance', // 'distance', 'price_asc', 'price_desc', 'createdAt_desc'
     } = req.query;
 
-    // 2. Build Filter Object
-    const filter: FilterQuery<IProperty> = { isActive: true }; // Start with only active properties
+    // 2. Build Aggregation Pipeline Stages
+    const pipeline: PipelineStage[] = [];
+    const matchFilter: FilterQuery<IProperty> = { isActive: true }; // Start with only active properties
 
+    // --- Geospatial Filtering ---
+    let isGeoNearUsed = false;
+    // Prioritize "nearMe" if both nearMe and maxDistance are provided
+    if (nearMeLat !== undefined && nearMeLng !== undefined) {
+      const latitude = parseFloat(nearMeLat as string);
+      const longitude = parseFloat(nearMeLng as string);
+      const radiusKm = parseFloat(nearMeRadius as string);
+
+      if (!isNaN(latitude) && !isNaN(longitude) && !isNaN(radiusKm)) {
+        pipeline.push({
+          $geoNear: {
+            near: { type: 'Point', coordinates: [longitude, latitude] },
+            distanceField: 'distanceFromPoint', // Output field with distance
+            maxDistance: radiusKm * 1000, // Convert KM to meters
+            spherical: true, // Use spherical geometry
+            // query: matchFilter // Apply initial match within $geoNear for efficiency
+          },
+        });
+        isGeoNearUsed = true; // $geoNear must be the first stage
+      }
+    } else if (maxDistance !== undefined) {
+      const distanceKm = parseFloat(maxDistance as string);
+      if (!isNaN(distanceKm)) {
+        // Use $geoWithin in the $match stage if not using $geoNear
+        matchFilter.coordinates = {
+          $geoWithin: {
+            $centerSphere: [
+              UNIVERSITY_COORDINATES.coordinates,
+              distanceKm / 6378.1, // Convert KM to radians
+            ],
+          },
+        };
+        // If sorting by distance from university is needed with $geoWithin,
+        // it's better to switch to $geoNear centered on the university.
+        // For simplicity here, we won't add manual distance calculation
+        // if $geoWithin is used, but rely on other sort options or default.
+        if (sortBy === 'distance') {
+          // Add a $geoNear stage centered on the university if distance sort is requested
+          pipeline.push({
+            $geoNear: {
+              near: {
+                type: 'Point',
+                coordinates: [76.156601, 32.22449],
+              },
+              distanceField: 'distanceFromUniversityKm', // Output field with distance
+              spherical: true,
+              distanceMultiplier: 0.001, // Convert meters to KM
+            },
+          });
+          isGeoNearUsed = true; // Mark that geoNear is used
+        }
+      }
+    }
+
+    // --- Other Filters ---
     if (minPrice !== undefined || maxPrice !== undefined) {
-      filter.pricePerMonth = {};
+      matchFilter.pricePerMonth = {};
       if (minPrice !== undefined) {
-        filter.pricePerMonth.$gte = parseInt(minPrice as string);
+        const minP = parseInt(minPrice as string);
+        if (!isNaN(minP)) matchFilter.pricePerMonth.$gte = minP;
       }
       if (maxPrice !== undefined) {
-        filter.pricePerMonth.$lte = parseInt(maxPrice as string);
+        const maxP = parseInt(maxPrice as string);
+        if (!isNaN(maxP)) matchFilter.pricePerMonth.$lte = maxP;
+      }
+      if (Object.keys(matchFilter.pricePerMonth).length === 0) {
+        delete matchFilter.pricePerMonth;
       }
     }
 
     if (propertyType !== undefined) {
-      filter.propertyType = propertyType as string;
+      matchFilter.propertyType = propertyType as string;
     }
 
     if (genderAllowance !== undefined) {
-      filter.propertyGenderAllowance = genderAllowance as string;
+      matchFilter.propertyGenderAllowance = genderAllowance as string;
     }
 
     if (services !== undefined) {
       const serviceList = (services as string).split(',');
       serviceList.forEach((service) => {
-        if (service.trim()) {
-          filter[`services.${service.trim()}`] = true;
+        const trimmedService = service.trim();
+        if (trimmedService) {
+          matchFilter[`services.${trimmedService}`] = true;
         }
       });
     }
 
     if (rentAgreementAvailable !== undefined) {
-      filter.rentAgreementAvailable =
+      matchFilter.rentAgreementAvailable =
         (rentAgreementAvailable as string).toLowerCase() === 'true';
     }
 
     if (isVerified !== undefined) {
-      filter.isVerified = (isVerified as string).toLowerCase() === 'true';
+      matchFilter.isVerified = (isVerified as string).toLowerCase() === 'true';
     }
 
-    // --- Note on Distance Filtering ---
-    // Efficient distance filtering (maxDistance from university or nearMe)
-    // requires a geospatial index on the 'coordinates' field (e.g., converting it
-    // to a GeoJSON Point and creating a '2dsphere' index).
-    // Without it, filtering by distance server-side involves either:
-    // 1. Complex $expr queries (less performant).
-    // 2. Fetching all documents matching other filters, calculating distance in Node.js,
-    //    then filtering/sorting (inefficient, breaks pagination accuracy).
-    // This implementation skips server-side distance filtering for performance.
-    // The client can use the returned coordinates or 'distanceFromUniversity' virtual
-    // for display or client-side filtering if needed.
-    // If implementing 'nearMe' or 'maxDistance' filtering server-side is crucial,
-    // consider updating the schema and using $geoWithin or $nearSphere queries.
+    // Add the $match stage *after* $geoNear if it was used, otherwise add it first
+    if (Object.keys(matchFilter).length > 0) {
+      if (isGeoNearUsed) {
+        // If $geoNear was used, add $match after it
+        pipeline.push({ $match: matchFilter });
+      } else {
+        // If $geoNear wasn't used, add $match at the beginning
+        pipeline.unshift({ $match: matchFilter });
+      }
+    }
 
-    // 3. Execute Queries
-    const properties = await Property.find(filter)
-      .skip(skip)
-      .limit(limit)
-      .select('-__v'); // Exclude version key
+    // --- Sorting ---
+    type SortOrder = 1 | -1;
+    type SortStage = {
+      [key: string]: SortOrder;
+    };
+    const sortStage: SortStage = {};
+    if (sortBy === 'price_asc') {
+      sortStage.pricePerMonth = 1;
+    } else if (sortBy === 'price_desc') {
+      sortStage.pricePerMonth = -1;
+    } else if (sortBy === 'createdAt_desc') {
+      sortStage.createdAt = -1;
+    } else if (sortBy === 'distance' && isGeoNearUsed) {
+      // Sort by distance calculated by $geoNear
+      // $geoNear implicitly sorts by distance, but we can make it explicit
+      // The field name depends on which $geoNear was used
+      const isGeoNearStage = (
+        stage: PipelineStage
+      ): stage is PipelineStage.GeoNear => {
+        return '$geoNear' in stage;
+      };
+      const distanceField = pipeline.some(
+        (stage) =>
+          isGeoNearStage(stage) &&
+          stage.$geoNear?.distanceField === 'distanceFromPoint'
+      )
+        ? 'distanceFromPoint'
+        : 'distanceFromUniversityKm';
+      sortStage[distanceField] = 1;
+    }
+    // Add default sort if needed, e.g., by creation date if no other sort specified
+    if (Object.keys(sortStage).length === 0 && !isGeoNearUsed) {
+      sortStage.createdAt = -1; // Default sort if not geospatial
+    }
 
-    const totalProperties = await Property.countDocuments(filter);
+    // Add $sort stage if there are sorting criteria
+    if (Object.keys(sortStage).length > 0) {
+      pipeline.push({ $sort: sortStage });
+    }
 
-    // 4. Calculate Pagination Metadata
+    // 3. Execute Aggregation with $facet for Pagination and Count
+    const aggregationResult: AggregationFacetResult[] =
+      await Property.aggregate([
+        ...pipeline, // Apply filtering, geospatial query, and sorting stages first
+        {
+          $facet: {
+            // Sub-pipeline for getting paginated data
+            data: [
+              { $skip: skip },
+              { $limit: limit },
+              { $project: { __v: 0 } }, // Exclude version key
+            ],
+            // Sub-pipeline for getting total count
+            metadata: [{ $count: 'totalProperties' }],
+          },
+        },
+      ]);
+
+    // 4. Process Aggregation Result
+    const properties = aggregationResult[0]?.data || [];
+    const totalProperties =
+      aggregationResult[0]?.metadata[0]?.totalProperties ?? 0;
     const totalPages = Math.ceil(totalProperties / limit);
 
     // 5. Send Response

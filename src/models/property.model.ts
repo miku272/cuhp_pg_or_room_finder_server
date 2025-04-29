@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { IUser } from './user.model';
 
-const UNIVERSITY_COORDINATES = {
+export const UNIVERSITY_COORDINATES = {
   type: 'Point',
   coordinates: [76.156601, 32.22449], // [lng, lat]
 };
@@ -40,6 +40,8 @@ export interface IProperty extends Document {
   images: undefined | null | string[];
   isVerified: boolean;
   isActive: boolean;
+  numberOfReviews: number;
+  averageRating: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +87,17 @@ const propertySchema = new Schema<IProperty>(
     images: [{ type: String }],
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    numberOfReviews: {
+      type: Number,
+      default: 0,
+    },
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+      set: (val: number): number => Math.round(val * 10) / 10, // round to 1 decimal place,
+    },
   },
   {
     timestamps: true,

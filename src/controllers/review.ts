@@ -5,6 +5,7 @@ import { type AuthenticatedRequest } from '../types/AuthenticatedRequest';
 import { Property, Review, User } from '../models';
 import { IUser } from '../models/user.model';
 import mongoose from 'mongoose';
+import { IReviewModel } from '../models/review.model';
 
 export const addReview = async (
   req: AuthenticatedRequest,
@@ -173,6 +174,10 @@ export const deleteReviewByPropertyId = async (
       throw new AppError('User not found', 404);
     }
 
+    if (propertyId === undefined || propertyId === null) {
+      throw new AppError('Property ID not found', 404);
+    }
+
     if (
       !user.property.includes(new mongoose.Types.ObjectId(propertyId as string))
     ) {
@@ -180,6 +185,8 @@ export const deleteReviewByPropertyId = async (
     }
 
     await Review.deleteMany({ property: propertyId });
+
+    await (Review as IReviewModel).calculateAverageRating(propertyId);
 
     res.status(204).json({
       status: 'success',

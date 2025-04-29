@@ -1,6 +1,6 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Query, Schema, Types } from 'mongoose';
 
-import { IProperty } from './property.model';
+import { IProperty, Property } from './property.model';
 import { IUser } from './user.model';
 
 export interface IReview extends Document {
@@ -12,6 +12,10 @@ export interface IReview extends Document {
   isAnonymous: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface IReviewModel extends mongoose.Model<IReview> {
+  calculateAverageRating(propertyId: Types.ObjectId | string): Promise<void>;
 }
 
 const reviewSchema = new Schema<IReview>(
@@ -52,6 +56,116 @@ const reviewSchema = new Schema<IReview>(
 );
 
 reviewSchema.index({ property: 1, user: 1 }, { unique: true });
+
+reviewSchema.statics.calculateAverageRating = async function (
+  propertyId: Types.ObjectId | string
+): Promise<void> {
+  const stats = await this.aggregate([
+    { $match: { property: new Types.ObjectId(propertyId) } },
+    {
+      $group: {
+        _id: '$property',
+        numberOfReviews: { $sum: 1 },
+        averageRating: { $avg: '$rating' },
+      },
+    },
+  ]);
+
+  if (stats.length > 0) {
+    await Property.findByIdAndUpdate(propertyId, {
+      numberOfReviews: stats[0].numberOfReviews,
+      averageRating: stats[0].averageRating,
+    });
+  } else {
+    await Property.findByIdAndUpdate(propertyId, {
+      numberOfReviews: 0,
+      averageRating: 0,
+    });
+  }
+};
+
+interface QueryWithReview extends Query<IReview | null, IReview> {
+  r?: undefined | null | IReview;
+}
+
+reviewSchema.post('save', async function (this: IReview) {
+  if (this.property instanceof Types.ObjectId) {
+    await (this.constructor as IReviewModel).calculateAverageRating(
+      this.property
+    );
+  } else if (
+    this.property !== undefined &&
+    this.property !== null &&
+    '_id' in this.property
+  ) {
+    await (this.constructor as IReviewModel).calculateAverageRating(
+      this.property._id
+    );
+  }
+});
+
+reviewSchema.pre(/^findOneAnd/, async function (this: QueryWithReview, next) {
+  // 'this' is the Query object
+  // Ensure 'this' is treated as a Query to access query methods
+  try {
+    // Find the document *before* the update/delete operation
+    // getFilter() gets the conditions used in the findOneAnd operation
+    this.r = await this.model.findOne(this.getFilter()).exec();
+  } catch (error) {
+    console.error('Error in pre findOneAnd hook:', error);
+    // Decide if you want to stop the operation or just log
+    // next(error); // Uncomment to stop operation on error
+  }
+  next();
+});
+
+reviewSchema.post(/^findOneAnd/, async function (this: QueryWithReview) {
+  // 'this' is the Query object
+  // 'this.r' contains the document *before* it was modified/deleted (if found)
+  if (this.r) {
+    let propertyId: Types.ObjectId | string;
+    if ('_id' in this.r.property) {
+      // If property is an object with _id
+      propertyId = this.r.property._id;
+    }
+
+    if (this.r.property instanceof Types.ObjectId) {
+      propertyId = this.r.property;
+    } else {
+      propertyId = this.r.property.toString();
+    }
+
+    // Check if the document was found in the pre hook
+    try {
+      // Access the constructor via the found document 'this.r'
+      // Ensure 'this.r.constructor' is treated as the Model
+      await (this.r.constructor as IReviewModel).calculateAverageRating(
+        propertyId // Use the property ID from the original document
+      );
+    } catch (error) {
+      console.error('Error in post findOneAnd hook (with doc):', error);
+    }
+  } else {
+    // Fallback: If the pre-hook didn't find the doc (e.g., it was already deleted)
+    // Try to get the propertyId from the query filter itself.
+    const filter = this.getFilter();
+    // Check if the filter has a property field we can use
+    const propertyId = filter?.property;
+    if (propertyId !== undefined && propertyId !== null) {
+      try {
+        // Use the model associated with the query ('this.model')
+        await (this.model as IReviewModel).calculateAverageRating(propertyId);
+      } catch (error) {
+        console.error('Error in post findOneAnd hook (fallback):', error);
+      }
+    } else {
+      // Log if we cannot determine the propertyId
+      console.warn(
+        `Review operation with filter ${JSON.stringify(filter)} completed, but couldn't determine propertyId for recalculation.`
+      );
+    }
+  }
+});
 
 export const Review = mongoose.model<IReview>(
   'Review',

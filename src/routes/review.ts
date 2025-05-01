@@ -17,6 +17,7 @@ import {
   deleteReviewByPropertyId,
   getReviewById,
   getReviewByPropertyId,
+  getReviewByPropertyIdAndUserId,
   getReviewsByUserId,
   updateReviewById,
 } from '../controllers/review';
@@ -35,6 +36,14 @@ reviewRouter.get(
   propertyIdParamValidation,
   validatePropertyIdParamRequest,
   getReviewByPropertyId
+);
+
+reviewRouter.get(
+  '/property/:propertyId/user/:userId',
+  tokenAuth,
+  propertyIdParamValidation,
+  validatePropertyIdParamRequest,
+  getReviewByPropertyIdAndUserId
 );
 
 reviewRouter.get(

@@ -279,6 +279,46 @@ export const getReviewByPropertyId = async (
   }
 };
 
+export const getReviewByPropertyIdAndUserId = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req._id;
+    const { propertyId } = req.params;
+
+    const [user, review] = await Promise.all([
+      User.findById(userId),
+      Review.findOne({ property: propertyId, user: userId }).populate([
+        { path: 'property', select: 'propertyName' },
+        { path: 'user', select: 'name -_id' },
+      ]),
+    ]);
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (!review) {
+      throw new AppError('Review not found', 404);
+    }
+
+    if (review.isAnonymous && !user.property.includes(review.property._id)) {
+      (review.user as IUser).name = 'Anonymous';
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        review: review,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getReviewsByUserId = async (
   req: AuthenticatedRequest,
   res: Response,

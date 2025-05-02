@@ -361,3 +361,63 @@ export const getReviewsByUserId = async (
     next(error);
   }
 };
+
+export const getReviewsMetadataOfUserProperty = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req._id;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (user.property.length === 0) {
+      res.status(200).json({
+        status: 'success',
+        data: {
+          totalReviews: 0,
+          overallAverageRating: 0,
+        },
+      });
+
+      return;
+    }
+
+    const stats = await Review.aggregate([
+      {
+        $match: { property: { $in: user.property } },
+      },
+      {
+        $group: {
+          _id: null,
+          totalReviews: { $sum: 1 },
+          overallAverageRating: { $avg: '$rating' },
+        },
+      },
+    ]);
+
+    let totalReviews = 0;
+    let overallAverageRating = 0;
+
+    if (stats.length > 0) {
+      totalReviews = stats[0].totalReviews;
+      overallAverageRating =
+        Math.round(stats[0].overallAverageRating * 10) / 10;
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        totalReviews,
+        overallAverageRating,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -19,6 +19,7 @@ import {
   getReviewByPropertyId,
   getReviewByPropertyIdAndUserId,
   getReviewsByUserId,
+  getReviewsMetadataOfUserProperty,
   updateReviewById,
 } from '../controllers/review';
 
@@ -29,6 +30,12 @@ reviewRouter.get('/', (req, res) => {
 });
 
 reviewRouter.get('/user', tokenAuth, getReviewsByUserId);
+
+reviewRouter.get(
+  '/user-review-metadata',
+  tokenAuth,
+  getReviewsMetadataOfUserProperty
+);
 
 reviewRouter.get(
   '/property/:propertyId',

@@ -46,7 +46,7 @@ const chatSchema = new Schema<IChat>(
   }
 );
 
-chatSchema.index({ sender: 1, receiver: 1 });
+chatSchema.index({ sender: 1, receiver: 1, property: 1 }, { unique: true });
 chatSchema.index({ propertyId: 1 });
 
 export const Chat = mongoose.model<IChat>('Chat', chatSchema);

@@ -246,13 +246,24 @@ export const getReviewByPropertyId = async (
   try {
     const userId = req._id;
     const { propertyId } = req.params;
+    const { limit } = req.query;
 
-    const [user, reviews] = await Promise.all([
+    let query = Review.find({ property: propertyId });
+
+    if (limit !== undefined && limit !== null) {
+      const limitValue = parseInt(limit as string, 10);
+      if (!isNaN(limitValue) && limitValue > 0) {
+        query = query.limit(limitValue);
+      }
+    }
+
+    const [user, reviews, totalReviews] = await Promise.all([
       User.findById(userId),
-      Review.find({ property: propertyId }).populate([
+      query.populate([
         { path: 'property', select: 'propertyName' },
         { path: 'user', select: 'name -_id' },
       ]),
+      Review.countDocuments({ property: propertyId }),
     ]);
 
     if (!user) {
@@ -261,7 +272,8 @@ export const getReviewByPropertyId = async (
 
     res.status(200).json({
       status: 'success',
-      length: reviews.length,
+      currentLength: reviews.length,
+      totalReviews: totalReviews,
       data: {
         reviews: reviews.map((review) => {
           if (

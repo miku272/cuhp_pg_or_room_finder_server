@@ -30,8 +30,11 @@ export const initializeChat = async (
     const ownerId = property.owner;
 
     const existingChat = await Chat.findOne({
-      $or: [{ sender: userId }, { receiver: userId }],
-      propertyId: propertyId,
+      $or: [
+        { sender: userId.toString(), receiver: ownerId.toString() },
+        { receiver: userId.toString(), sender: ownerId.toString() },
+      ],
+      property: propertyId.toString(),
     })
       .populate('sender', 'name email phone')
       .populate('receiver', 'name email phone')

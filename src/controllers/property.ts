@@ -4,9 +4,9 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 
 import { Property, UNIVERSITY_COORDINATES } from '../models';
-import { User } from '../models';
+import { User, Saved } from '../models';
 import { AppError } from '../utils/error';
-import { FilterQuery, PipelineStage } from 'mongoose';
+import mongoose, { FilterQuery, PipelineStage } from 'mongoose';
 import { IProperty } from '../models/property.model';
 
 export const addProperty = async (
@@ -64,7 +64,7 @@ export const addProperty = async (
 
     res.status(201).json({
       status: 'success',
-      data: { property },
+      data: { property: { ...property, isSaved: false } },
     });
   } catch (error) {
     next(error);
@@ -104,7 +104,11 @@ export const updateProperty = async (
       images,
     } = req.body;
 
-    const existingProperty = await Property.findById(propertyId);
+    const [existingProperty, isSaved] = await Promise.all([
+      Property.findById(propertyId),
+      Saved.exists({ property: propertyId, user: _id }),
+    ]);
+
     if (!existingProperty) {
       throw new AppError('Property not found', 404);
     }
@@ -137,7 +141,9 @@ export const updateProperty = async (
 
     res.status(200).json({
       status: 'success',
-      data: { property },
+      data: {
+        property: { ...property, isSaved: isSaved === null ? false : true },
+      },
     });
   } catch (error) {
     next(error);
@@ -152,7 +158,10 @@ export const togglePropertyActivation = async (
   try {
     const { propertyId } = req.params;
 
-    const property = await Property.findById(propertyId);
+    const [property, isSaved] = await Promise.all([
+      Property.findById(propertyId),
+      Saved.exists({ property: propertyId, user: req._id }),
+    ]);
 
     if (!property) {
       throw new AppError('Property not found', 404);
@@ -164,7 +173,9 @@ export const togglePropertyActivation = async (
 
     res.status(200).json({
       status: 'success',
-      data: { property },
+      data: {
+        property: { ...property, isSaved: isSaved === null ? false : true },
+      },
     });
   } catch (error) {
     next(error);
@@ -179,7 +190,10 @@ export const getPropertyById = async (
   try {
     const { propertyId } = req.params;
 
-    const property = await Property.findById(propertyId);
+    const [property, isSaved] = await Promise.all([
+      Property.findById(propertyId),
+      Saved.exists({ property: propertyId, user: req._id }),
+    ]);
 
     if (!property) {
       throw new AppError('Property not found', 404);
@@ -187,7 +201,9 @@ export const getPropertyById = async (
 
     res.status(200).json({
       status: 'success',
-      data: { property },
+      data: {
+        property: { ...property, isSaved: isSaved === null ? false : true },
+      },
     });
   } catch (error) {
     next(error);
@@ -200,18 +216,31 @@ export const getPropertiesById = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    const userId = req._id;
     const { propertyIds } = req.body;
 
-    const properties = await Property.find({ _id: { $in: propertyIds } });
+    const [properties, savedEntries] = await Promise.all([
+      Property.find({ _id: { $in: propertyIds } }),
+      Saved.find({ property: { $in: propertyIds }, user: userId }),
+    ]);
 
     if (properties.length < 1) {
       throw new AppError('Properties not found', 404);
     }
 
+    const savedPropertyIds = new Set(
+      savedEntries.map((entry) => entry.property.toString())
+    );
+
+    const propertiesWithSavedStatus = properties.map((property) => ({
+      ...property.toObject(),
+      isSaved: savedPropertyIds.has(property._id.toString()),
+    }));
+
     res.status(200).json({
       status: 'success',
       resultsLength: properties.length,
-      data: { properties },
+      data: { properties: propertiesWithSavedStatus },
     });
   } catch (error) {
     next(error);
@@ -466,6 +495,35 @@ export const getPropertiesByPagination = async (
       pipeline.push({ $sort: sortStage });
     }
 
+    // --- Add isSaved status ---
+    pipeline.push(
+      {
+        $lookup: {
+          from: 'saveds', // The collection name for 'Saved' model
+          let: { propertyId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$property', '$$propertyId'] },
+                    { $eq: ['$user', new mongoose.Types.ObjectId(userId!)] },
+                  ],
+                },
+              },
+            },
+            { $limit: 1 }, // Optimization: we only need to know if it exists
+          ],
+          as: 'userSavedEntry',
+        },
+      },
+      {
+        $addFields: {
+          isSaved: { $gt: [{ $size: '$userSavedEntry' }, 0] },
+        },
+      }
+    );
+
     // 3. Execute Aggregation with $facet for Pagination and Count
     const aggregationResult: AggregationFacetResult[] =
       await Property.aggregate([
@@ -476,7 +534,7 @@ export const getPropertiesByPagination = async (
             data: [
               { $skip: skip },
               { $limit: limit },
-              { $project: { __v: 0 } }, // Exclude version key
+              { $project: { __v: 0, userSavedEntry: 0 } }, // Exclude version key and temporary lookup field
             ],
             // Sub-pipeline for getting total count
             metadata: [{ $count: 'totalProperties' }],

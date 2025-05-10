@@ -9,6 +9,7 @@ import otpRouter from './routes/otp';
 import propertyRouter from './routes/property';
 import chatRouter from './routes/chat';
 import reviewRouter from './routes/review';
+import savedRouter from './routes/saved';
 
 import { connectDB } from './db';
 import { setupSocketIO } from './socket';
@@ -50,6 +51,8 @@ app.use(propertyRouter);
 app.use('/chat', chatRouter);
 
 app.use('/review', reviewRouter);
+
+app.use('/saved', savedRouter);
 
 app.get('/', (req, res) => {
   res.send('Hello World!!!');

@@ -1,3 +1,20 @@
+/**
+ * Generates an HTML template for 404 Not Found responses
+ *
+ * This function creates a responsive, styled HTML page that displays
+ * when a user attempts to access a non-existent route. It includes:
+ * - The application branding
+ * - A user-friendly error message
+ * - Details about the failed request (method and URL)
+ * - Footer with copyright information
+ *
+ * The template uses a light color scheme with primary brand colors
+ * and is responsive across different viewport sizes.
+ *
+ * @param method - The HTTP method used in the request (GET, POST, etc.)
+ * @param url - The URL path that was requested but not found
+ * @returns A complete HTML document as a string to be sent as the response
+ */
 const routeNotFoundTemplate = (method: string, url: string): string => `
 <!DOCTYPE html>
 <html lang="en">

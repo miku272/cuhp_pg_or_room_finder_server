@@ -1,3 +1,15 @@
+/**
+ * @fileoverview Property middleware for CUHP PG or Room Finder application
+ *
+ * This module provides middleware for validating property-related operations:
+ * - Adding new properties with extensive validation rules
+ * - Updating existing properties with complete data validation
+ * - Pagination parameters validation for listing properties
+ *
+ * All validation rules use express-validator and errors are properly formatted
+ * to be passed to the global error handler.
+ */
+
 import { Request, Response, NextFunction } from 'express';
 import {
   body,
@@ -9,6 +21,16 @@ import {
 import { AppError } from '../utils/error';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 
+/**
+ * Validation rules for adding a new property
+ * Validates all required and optional property fields including:
+ * - Property details (name, address, location)
+ * - Owner information
+ * - Pricing and property type
+ * - Gender allowance rules
+ * - Geolocation coordinates
+ * - Additional services and images
+ */
 export const addPropertyValidation: ValidationChain[] = [
   body('propertyName')
     .trim()
@@ -29,6 +51,7 @@ export const addPropertyValidation: ValidationChain[] = [
     .optional()
     .custom((value: string) => {
       if (value) {
+        // Validate length only if the field is provided
         if (value.trim().length < 3 || value.trim().length > 200) {
           throw new Error(
             'Property address line 2 must be between 3 and 200 characters'
@@ -91,6 +114,7 @@ export const addPropertyValidation: ValidationChain[] = [
     .isIn(['boys', 'girls', 'co-ed'])
     .withMessage('Invalid gender allowance'),
 
+  // Complex validation for geolocation coordinates
   body('coordinates')
     .isObject()
     .withMessage('Coordinates are required and should be an object')
@@ -115,14 +139,17 @@ export const addPropertyValidation: ValidationChain[] = [
       return true;
     }),
 
+  // Validate longitude value within geographic bounds
   body('coordinates.coordinates.0') // Longitude
     .isFloat({ min: -180, max: 180 })
     .withMessage('Longitude must be between -180 and 180'),
 
+  // Validate latitude value within geographic bounds
   body('coordinates.coordinates.1') // Latitude
     .isFloat({ min: -90, max: 90 })
     .withMessage('Latitude must be between -90 and 90'),
 
+  // Optional services object validation
   body('services')
     .optional()
     .custom((value: unknown) => {
@@ -134,6 +161,7 @@ export const addPropertyValidation: ValidationChain[] = [
       return true;
     }),
 
+  // Optional images array validation
   body('images')
     .optional()
     .custom((value: unknown) => {
@@ -145,6 +173,7 @@ export const addPropertyValidation: ValidationChain[] = [
       return true;
     }),
 
+  // Optional boolean field validation
   body('rentAgreementAvailable')
     .optional()
     .custom((value: unknown) => {
@@ -157,6 +186,14 @@ export const addPropertyValidation: ValidationChain[] = [
     }),
 ];
 
+/**
+ * Middleware to validate adding a new property
+ * Processes validation results and formats any errors
+ *
+ * @param req - Express request or authenticated request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
 export const validateAddPropertyRequest = (
   req: Request | AuthenticatedRequest,
   res: Response,
@@ -167,7 +204,8 @@ export const validateAddPropertyRequest = (
   if (!errors.isEmpty()) {
     const validationErrors = errors.array();
 
-    console.log(validationErrors);
+    // Log validation errors for debugging purposes
+    // console.log(validationErrors);
 
     const error = new AppError('Validation failed', 422, validationErrors);
     next(error);
@@ -177,6 +215,11 @@ export const validateAddPropertyRequest = (
   next();
 };
 
+/**
+ * Validation rules for updating an existing property
+ * Similar to addPropertyValidation but includes property ID validation
+ * All fields must be provided for complete property update
+ */
 export const updatePropertyValidation: ValidationChain[] = [
   body('propertyId')
     .trim()
@@ -185,6 +228,8 @@ export const updatePropertyValidation: ValidationChain[] = [
     .isMongoId()
     .withMessage('Property ID must be a valid MongoDB ObjectId'),
 
+  // All other validations are identical to addPropertyValidation
+  // Include property details validation
   body('propertyName')
     .trim()
     .notEmpty()
@@ -332,6 +377,14 @@ export const updatePropertyValidation: ValidationChain[] = [
     }),
 ];
 
+/**
+ * Middleware to validate updating a property
+ * Processes validation results and formats any errors
+ *
+ * @param req - Express request or authenticated request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
 export const validateUpdatePropertyRequest = (
   req: Request | AuthenticatedRequest,
   res: Response,
@@ -342,7 +395,8 @@ export const validateUpdatePropertyRequest = (
   if (!errors.isEmpty()) {
     const validationErrors = errors.array();
 
-    console.log(validationErrors);
+    // Log validation errors for debugging purposes
+    // console.log(validationErrors);
 
     const error = new AppError('Validation failed', 422, validationErrors);
     next(error);
@@ -352,6 +406,11 @@ export const validateUpdatePropertyRequest = (
   next();
 };
 
+/**
+ * Validation rules for pagination parameters
+ * Used for property listing endpoints to validate and sanitize query parameters
+ * Converts string values to appropriate types (e.g., string -> integer)
+ */
 export const paginationValidation: ValidationChain[] = [
   query('page')
     .optional()
@@ -368,6 +427,14 @@ export const paginationValidation: ValidationChain[] = [
   query('sort').optional().isString().withMessage('Sort must be a string'),
 ];
 
+/**
+ * Middleware to validate pagination parameters
+ * Processes validation results and formats any errors
+ *
+ * @param req - Express request or authenticated request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
 export const validatePaginationParams = (
   req: Request | AuthenticatedRequest,
   res: Response,
@@ -378,7 +445,8 @@ export const validatePaginationParams = (
   if (!errors.isEmpty()) {
     const validationErrors = errors.array();
 
-    console.log(validationErrors);
+    // Log validation errors for debugging purposes
+    // console.log(validationErrors);
 
     const error = new AppError('Validation failed', 422, validationErrors);
     next(error);

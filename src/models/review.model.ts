@@ -1,20 +1,61 @@
+/**
+ * @fileoverview Property Review model for CUHP PG or Room Finder application
+ *
+ * This file defines the Mongoose schema and interface for property reviews.
+ * Reviews are created by users to rate properties and provide feedback,
+ * which helps other users make informed decisions.
+ */
+
 import mongoose, { Document, Query, Schema, Types } from 'mongoose';
 
 import { IProperty, Property } from './property.model';
 import { IUser } from './user.model';
 
+/**
+ * Interface representing a property review in MongoDB
+ *
+ * @interface IReview
+ * @extends {Document} Mongoose Document interface
+ */
 export interface IReview extends Document {
+  /** Unique identifier for the review */
   _id: mongoose.Types.ObjectId;
+
+  /** Reference to the property being reviewed */
   property: mongoose.Types.ObjectId | IProperty;
+
+  /** User who submitted the review */
   user: mongoose.Types.ObjectId | IUser;
+
+  /** Numeric rating from 1-5 */
   rating: number;
+
+  /** Text content of the review */
   review: string;
+
+  /** Whether the review should hide the user's identity */
   isAnonymous: boolean;
+
+  /** When the review was created */
   createdAt: Date;
+
+  /** When the review was last updated */
   updatedAt: Date;
 }
 
+/**
+ * Extended model interface with static methods for review aggregations
+ *
+ * @interface IReviewModel
+ * @extends {mongoose.Model<IReview>}
+ */
 export interface IReviewModel extends mongoose.Model<IReview> {
+  /**
+   * Recalculates and updates the average rating and review count for a property
+   *
+   * @param {Types.ObjectId|string} propertyId - ID of the property to recalculate ratings for
+   * @returns {Promise<void>}
+   */
   calculateAverageRating(propertyId: Types.ObjectId | string): Promise<void>;
 }
 
@@ -84,10 +125,18 @@ reviewSchema.statics.calculateAverageRating = async function (
   }
 };
 
+/**
+ * Helper interface to store the review document in hooks
+ * Used to pass the review between pre and post hook operations
+ */
 interface QueryWithReview extends Query<IReview | null, IReview> {
   r?: undefined | null | IReview;
 }
 
+/**
+ * Post-save hook that updates the property's average rating when a review is created
+ * Handles both the case where property is an ObjectId or a populated document
+ */
 reviewSchema.post('save', async function (this: IReview) {
   if (this.property instanceof Types.ObjectId) {
     await (this.constructor as IReviewModel).calculateAverageRating(

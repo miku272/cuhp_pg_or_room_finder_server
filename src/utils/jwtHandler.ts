@@ -1,3 +1,7 @@
+/**
+ * @fileoverview JWT (JSON Web Token) handling utility
+ * Provides functionality for token generation and verification
+ */
 import jwt, { JwtPayload, SignOptions } from 'jsonwebtoken';
 import { Types } from 'mongoose';
 import dotenv from 'dotenv';
@@ -5,11 +9,23 @@ import { AppError } from './error';
 
 dotenv.config();
 
+/**
+ * Interface defining the structure of a token response
+ * @property token - The JWT string
+ * @property expiresIn - ISO string representing the expiration date
+ */
 interface TokenResponse {
   token: string;
   expiresIn: string;
 }
 
+/**
+ * Generates a JWT token for a user
+ *
+ * @param _id - The MongoDB ObjectId or string ID of the user
+ * @returns Object containing the token and its expiration date
+ * @throws AppError if JWT_SECRET is not defined or other errors occur during token generation
+ */
 export const generateJWT = (_id: Types.ObjectId | string): TokenResponse => {
   try {
     if (
@@ -22,7 +38,7 @@ export const generateJWT = (_id: Types.ObjectId | string): TokenResponse => {
 
     const expiresInString = process.env.JWT_EXPIRES_IN ?? '30d';
 
-    // Convert expiresInString to seconds for jwt.sign
+    // Converting expiresInString to seconds for jwt.sign
     let expiresInSeconds: number;
     if (expiresInString.endsWith('d')) {
       const days = parseInt(expiresInString.replace('d', ''), 10);
@@ -34,19 +50,19 @@ export const generateJWT = (_id: Types.ObjectId | string): TokenResponse => {
       const minutes = parseInt(expiresInString.replace('m', ''), 10);
       expiresInSeconds = minutes * 60;
     } else {
-      // Attempt to parse as seconds directly, default if invalid
+      // Attempting to parse as seconds directly, default if invalid
       expiresInSeconds = parseInt(expiresInString, 10);
       if (isNaN(expiresInSeconds)) {
         expiresInSeconds = 30 * 24 * 60 * 60; // Default: 30 days in seconds
       }
     }
 
-    // Calculate the actual expiration date string to return
+    // Calculating the actual expiration date string to return
     const expirationDate = new Date(
       Date.now() + expiresInSeconds * 1000
     ).toISOString();
 
-    // Use the numeric value (seconds) for signOptions
+    // Using the numeric value (seconds) for signOptions
     const signOptions: SignOptions = { expiresIn: expiresInSeconds };
 
     const token = jwt.sign(
@@ -63,6 +79,13 @@ export const generateJWT = (_id: Types.ObjectId | string): TokenResponse => {
   }
 };
 
+/**
+ * Verifies a JWT token and extracts its payload
+ *
+ * @param token - The JWT token string to verify
+ * @returns The decoded JWT payload
+ * @throws AppError if the token is invalid, expired, or has invalid structure
+ */
 export const verifyJWT = (token: string): JwtPayload => {
   if (!token) {
     throw new AppError('No authorization token. Access denied!', 401);

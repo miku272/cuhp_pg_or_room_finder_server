@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Review middleware for CUHP PG or Room Finder application
+ *
+ * This module provides middleware for validating property review operations:
+ * - Adding new reviews with ratings
+ * - Retrieving reviews by ID or property ID
+ * - Updating existing reviews
+ * - Deleting reviews
+ *
+ * All validation rules use express-validator to ensure data integrity
+ * and errors are properly formatted for the global error handler.
+ */
+
 import { Request, Response, NextFunction } from 'express';
 import {
   body,
@@ -9,6 +22,10 @@ import {
 import { AppError } from '../utils/error';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 
+/**
+ * Validation rules for adding a new property review
+ * Validates property ID, rating value, review content length, and anonymity flag
+ */
 export const addReviewValidation: ValidationChain[] = [
   body('property')
     .trim()
@@ -37,6 +54,14 @@ export const addReviewValidation: ValidationChain[] = [
     .withMessage('isAnonymous must be a boolean value (true or false'),
 ];
 
+/**
+ * Middleware to validate adding a new review
+ * Processes validation results and formats any errors
+ *
+ * @param req - Express request or authenticated request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
 export const validateAddReviewRequest = (
   req: Request | AuthenticatedRequest,
   res: Response,
@@ -54,6 +79,10 @@ export const validateAddReviewRequest = (
   next();
 };
 
+/**
+ * Validation rules for retrieving a review by its ID
+ * Ensures the review ID is a valid MongoDB ObjectId
+ */
 export const getReviewByIdValidation: ValidationChain[] = [
   param('reviewId')
     .trim()
@@ -62,6 +91,15 @@ export const getReviewByIdValidation: ValidationChain[] = [
     .isMongoId()
     .withMessage('Review Id must be a valid MongoDB ObjectId'),
 ];
+
+/**
+ * Middleware to validate getting a review by its ID
+ * Processes validation results and formats any errors
+ *
+ * @param req - Express request or authenticated request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
 export const validateGetReviewByIdRequest = (
   req: Request | AuthenticatedRequest,
   res: Response,
@@ -79,6 +117,11 @@ export const validateGetReviewByIdRequest = (
   next();
 };
 
+/**
+ * Validation rules for updating an existing review
+ * Validates review ID, optional rating, review content, and anonymity flag
+ * Ensures at least one field is provided for update
+ */
 export const updateReviewValidation: ValidationChain[] = [
   // Validate reviewId in the parameter
   param('reviewId')
@@ -118,6 +161,14 @@ export const updateReviewValidation: ValidationChain[] = [
   }),
 ];
 
+/**
+ * Middleware to validate updating a review
+ * Processes validation results and formats any errors
+ *
+ * @param req - Express request or authenticated request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
 export const validateUpdateReviewRequest = (
   req: Request | AuthenticatedRequest,
   res: Response,
@@ -135,11 +186,11 @@ export const validateUpdateReviewRequest = (
   next();
 };
 
-// --- New Delete Review By ID Validation (Same as Get By ID) ---
-// We can reuse getReviewByIdValidation and validateGetReviewByIdRequest
-// Or create specific ones if needed later. For now, reuse is fine.
-
-// --- New Delete/Get Review By Property ID Validation ---
+/**
+ * Validation rules for review operations that use property ID as parameter
+ * Ensures the property ID is a valid MongoDB ObjectId
+ * Used for retrieving/deleting reviews associated with a property
+ */
 export const propertyIdParamValidation: ValidationChain[] = [
   param('propertyId')
     .trim()
@@ -149,6 +200,14 @@ export const propertyIdParamValidation: ValidationChain[] = [
     .withMessage('Property Id must be a valid MongoDB ObjectId'),
 ];
 
+/**
+ * Middleware to validate property ID parameter
+ * Processes validation results and formats any errors
+ *
+ * @param req - Express request or authenticated request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
 export const validatePropertyIdParamRequest = (
   req: Request | AuthenticatedRequest,
   res: Response,

@@ -1,3 +1,31 @@
+/**
+ * @fileoverview Email template for OTP verification
+ * Provides a responsive HTML email template for sending one-time passwords to users
+ */
+
+/**
+ * Generates a styled HTML email template for OTP verification
+ *
+ * This template creates a professionally designed, responsive email that displays
+ * a verification code to users. It includes:
+ * - Brand information (CUHP PG Finder)
+ * - Clear instructions for the user
+ * - Prominently displayed OTP in a colored box
+ * - Expiration notice (10 minutes)
+ * - Responsive design for mobile and desktop clients
+ *
+ * @param {string} otp - The one-time password to be displayed in the email
+ * @returns {string} Complete HTML email template with the OTP embedded
+ * @example
+ * // Generate email HTML with the user's OTP
+ * const emailHtml = otpEmailTemplate('123456');
+ * // Use with email sending utility
+ * await sendEmail({
+ *   emailTo: user.email,
+ *   subject: 'Email verification OTP',
+ *   html: emailHtml
+ * });
+ */
 const otpEmailTemplate = (otp: string): string => `
 <!DOCTYPE html>
 <html>

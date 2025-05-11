@@ -2,7 +2,7 @@
 
 ## Description
 
-This project is the backend API for a PG (Paying Guest) or Room Finder application, likely targeted for students or individuals around CUHP (Central University of Himachal Pradesh). It provides functionalities for user authentication, property listings, real-time chat, OTP verification, reviews, and saved properties. The application is built with Node.js, Express, MongoDB, and uses Socket.IO for real-time communication.
+This project is the backend API for a PG (Paying Guest) or Room Finder application, targeted for students or individuals around CUHP (Central University of Himachal Pradesh). It provides functionalities for user authentication, property listings, real-time chat, OTP verification, reviews, and saved properties. The application is built with Node.js, Express, MongoDB, and uses Socket.IO for real-time communication.
 
 ## Features
 
@@ -41,8 +41,8 @@ This project is the backend API for a PG (Paying Guest) or Room Finder applicati
 1.  **Clone the repository:**
 
     ```bash
-    git clone <repository-url>
-    cd cuhp_pg_or_room_finder
+    git clone https://github.com/miku272/cuhp_pg_or_room_finder_server.git
+    cd cuhp_pg_or_room_finder_server
     ```
 
 2.  **Install dependencies:**

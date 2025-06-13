@@ -27,6 +27,7 @@ import {
   getPropertiesById,
   getPropertiesByPagination,
   getPropertyById,
+  getPropertyNameAutocomplete,
   getTotalPropertiesCount,
   togglePropertyActivation,
   updateProperty,
@@ -81,6 +82,22 @@ propertyRouter.get(
   paginationValidation, // Validate pagination parameters
   validatePaginationParams, // Process validation results
   getPropertiesByPagination // Retrieve filtered properties
+);
+
+/**
+ * Get property name suggestions for autocomplete
+ * @route GET /property/autocomplete-property-name
+ * @authentication Required
+ * @query {string} term - The search term for property name autocomplete
+ * @returns {object} 200 - An object containing a list of full property suggestion objects, each augmented with an 'isSaved' boolean field.
+ * @returns {object} 200 - Example: { "status": "success", "data": { "suggestions": [{ "_id": "...", "propertyName": "Sunshine PG", ..., "isSaved": true }] } }
+ * @returns {Error} 400 - Bad request if term is missing or invalid
+ * @returns {Error} 500 - Internal server error
+ */
+propertyRouter.get(
+  '/autocomplete-property-name',
+  tokenAuth,
+  getPropertyNameAutocomplete
 );
 
 /**

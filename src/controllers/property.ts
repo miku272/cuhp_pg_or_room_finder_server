@@ -431,6 +431,99 @@ export const getPropertiesActiveAndInactiveCount = async (
 };
 
 /**
+ * Provides autocomplete suggestions for property names.
+ *
+ * Searches for active property names that start with the provided search term.
+ * Returns a limited list of distinct matching names.
+ *
+ * @param req - Authenticated request with search term in query
+ * @param res - Express response object
+ * @param next - Express next function for error handling
+ */
+export const getPropertyNameAutocomplete = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req._id;
+    const searchTerm = req.query.term as string;
+
+    if (
+      searchTerm === undefined ||
+      searchTerm === null ||
+      typeof searchTerm !== 'string' ||
+      searchTerm.trim() === ''
+    ) {
+      res.status(200).json({
+        status: 'success',
+        data: {
+          suggestions: [],
+        },
+      });
+
+      return;
+    }
+
+    const regex = new RegExp(`^${searchTerm.trim()}`, 'i');
+
+    const pipeline: PipelineStage[] = [
+      {
+        $match: {
+          propertyName: regex,
+          isActive: true,
+        },
+      },
+      {
+        $limit: 20,
+      },
+      // Lookup to check if the property is saved by the current user
+      {
+        $lookup: {
+          from: 'saveds',
+          let: { propertyId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$propertyId', '$$propertyId'] },
+                    { $eq: ['$userId', new mongoose.Types.ObjectId(userId!)] },
+                  ],
+                },
+              },
+            },
+            { $limit: 1 }, // We only need to know if it exists
+          ],
+          as: 'userSavedEntry',
+        },
+      },
+      {
+        $addFields: {
+          isSaved: { $gt: [{ $size: '$userSavedEntry' }, 0] },
+        },
+      },
+      // Project to remove unnecessary fields
+      {
+        $project: {
+          userSavedEntry: 0, // Exclude the temporary lookup field
+          __v: 0, // Exclude version key
+        },
+      },
+    ];
+
+    const suggestions = await Property.aggregate(pipeline);
+
+    res.status(200).json({
+      status: 'success',
+      data: { suggestions },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Interface to represent the structure of MongoDB aggregation results
  * when using $facet for both data and metadata in a single query
  */

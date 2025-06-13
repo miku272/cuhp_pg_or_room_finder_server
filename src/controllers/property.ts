@@ -465,14 +465,55 @@ export const getPropertyAutocomplete = async (
       return;
     }
 
-    const regex = new RegExp(`^${searchTerm.trim()}`, 'i');
+    const trimmedSearchTerm = searchTerm.trim();
+    const escapedSearchTerm = trimmedSearchTerm.replace(
+      /[-[\]{}()*+?.,\\^$|#\s]/g,
+      '\\$&'
+    ); // Escape special characters for regex
 
     const pipeline: PipelineStage[] = [
       {
         $match: {
-          propertyName: regex,
-          isActive: true,
+          $and: [
+            { isActive: true },
+            {
+              // Match if either the text search finds something or the propertyName starts with the search term
+              $or: [
+                { $text: { $search: trimmedSearchTerm } },
+                {
+                  propertyName: {
+                    $regex: `^${escapedSearchTerm}`,
+                    $options: 'i',
+                  },
+                },
+              ],
+            },
+          ],
         },
+      },
+      // Add fields for custom sorting: prioritize prefix matches, then text search score
+      {
+        $addFields: {
+          textScore: { $meta: 'textScore' }, // Get the score from $text search
+          isPrefixMatch: {
+            // Check if propertyName starts with the search term
+            $cond: {
+              if: {
+                $regexMatch: {
+                  input: '$propertyName',
+                  regex: `^${escapedSearchTerm}`,
+                  options: 'i',
+                },
+              },
+              then: 1, // Higher value for prefix matches
+              else: 0,
+            },
+          },
+        },
+      },
+      // Sort by text score to prioritize relevant matches (Optional)
+      {
+        $sort: { isPrefixMatch: -1, textScore: -1 },
       },
       {
         $limit: 20,
@@ -501,6 +542,7 @@ export const getPropertyAutocomplete = async (
       {
         $addFields: {
           isSaved: { $gt: [{ $size: '$userSavedEntry' }, 0] },
+          // score: { $meta: 'textScore' }, // Include text score for relevance (Optional)
         },
       },
       // Project to remove unnecessary fields
@@ -508,6 +550,7 @@ export const getPropertyAutocomplete = async (
         $project: {
           userSavedEntry: 0, // Exclude the temporary lookup field
           __v: 0, // Exclude version key
+          isPrefixMatch: 0, // Exclude the prefix match field
         },
       },
     ];

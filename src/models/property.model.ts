@@ -113,7 +113,7 @@ export interface IProperty extends Document {
 const propertySchema = new Schema<IProperty>(
   {
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    propertyName: { type: String, required: true },
+    propertyName: { type: String, required: true, trim: true, index: true },
     propertyAddressLine1: { type: String, required: true },
     propertyAddressLine2: { type: String },
     propertyVillageOrCity: { type: String, required: true },
@@ -172,6 +172,26 @@ const propertySchema = new Schema<IProperty>(
 );
 
 propertySchema.index({ coordinates: '2dsphere' });
+
+// Text index for searching properties
+propertySchema.index(
+  {
+    propertyName: 'text',
+    propertyAddressLine1: 'text',
+    propertyAddressLine2: 'text',
+    propertyVillageOrCity: 'text',
+    ownerName: 'text', // Optionally include owner name in search
+  },
+  {
+    weights: {
+      propertyName: 10, // Higher weight for propertyName
+      propertyAddressLine1: 5,
+      propertyVillageOrCity: 3,
+      ownerName: 2,
+    },
+    name: 'PropertyTextIndex',
+  }
+);
 
 /**
  * Virtual property to calculate the distance of the property from the university

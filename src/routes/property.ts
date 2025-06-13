@@ -26,8 +26,8 @@ import {
   getPropertiesActiveAndInactiveCount,
   getPropertiesById,
   getPropertiesByPagination,
+  getPropertyAutocomplete,
   getPropertyById,
-  getPropertyNameAutocomplete,
   getTotalPropertiesCount,
   togglePropertyActivation,
   updateProperty,
@@ -86,7 +86,7 @@ propertyRouter.get(
 
 /**
  * Get property name suggestions for autocomplete
- * @route GET /property/autocomplete-property-name
+ * @route GET /autocomplete-property
  * @authentication Required
  * @query {string} term - The search term for property name autocomplete
  * @returns {object} 200 - An object containing a list of full property suggestion objects, each augmented with an 'isSaved' boolean field.
@@ -95,9 +95,9 @@ propertyRouter.get(
  * @returns {Error} 500 - Internal server error
  */
 propertyRouter.get(
-  '/autocomplete-property-name',
+  '/autocomplete-property',
   tokenAuth,
-  getPropertyNameAutocomplete
+  getPropertyAutocomplete
 );
 
 /**

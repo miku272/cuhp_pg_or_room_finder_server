@@ -440,7 +440,7 @@ export const getPropertiesActiveAndInactiveCount = async (
  * @param res - Express response object
  * @param next - Express next function for error handling
  */
-export const getPropertyNameAutocomplete = async (
+export const getPropertyAutocomplete = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
